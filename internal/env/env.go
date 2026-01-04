@@ -58,18 +58,24 @@ func NewEnv() (*Env, error) {
 func (e *Env) validate() error {
 	if e.App.Port == 0 {
 		return errors.New("APP_PORT is required")
-	}
-	if e.JWT.AccessSecret == "" {
+	} else if e.JWT.AccessSecret == "" {
 		return errors.New("JWT_ACCESS_SECRET is required")
-	}
-	if e.JWT.AccessExp == 0 {
+	} else if e.JWT.AccessExp == 0 {
 		return errors.New("JWT_ACCESS_EXP is required")
-	}
-	if e.JWT.RefreshSecret == "" {
+	} else if e.JWT.RefreshSecret == "" {
 		return errors.New("JWT_REFRESH_SECRET is required")
-	}
-	if e.JWT.RefreshExp == 0 {
+	} else if e.JWT.RefreshExp == 0 {
 		return errors.New("JWT_REFRESH_EXP is required")
+	} else if e.Database.DBName == "" {
+		return errors.New("DB is required")
+	} else if e.Database.Host == "" {
+		return errors.New("DB_HOST is required")
+	} else if e.Database.Password == "" {
+		return errors.New("DB_PASSWORD is required")
+	} else if e.Database.Port == 0 {
+		return errors.New("DB_PORT is required")
+	} else if e.Database.SslMode == "" {
+		return errors.New("DB_SSLMODE is required (disable or enable)")
 	}
 	return nil
 }

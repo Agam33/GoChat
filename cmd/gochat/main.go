@@ -5,7 +5,14 @@ import (
 	"go-chat/internal/config"
 	"go-chat/internal/database"
 	"go-chat/internal/env"
+	"go-chat/internal/http/handler"
+	"go-chat/internal/http/router"
 	"go-chat/internal/http/websocket"
+	"go-chat/internal/jwt"
+	"go-chat/internal/services/auth"
+	"go-chat/internal/services/chat"
+	"go-chat/internal/services/room"
+	"go-chat/internal/services/user"
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -24,10 +31,30 @@ func main() {
 		log.Fatal(err)
 	}
 
-	roomHub := websocket.NewRoomHub()
+	r := gin.New()
+	r.Use(gin.Recovery(), gin.Logger())
+
+	// repos
+	authRepo := auth.NewAuthReposeitory(psqlDB)
+	roomRepo := room.NewRoomRepository(psqlDB)
+	userRepo := user.NewUserRepository(psqlDB)
+	chatRepo := chat.NewChatRepository(psqlDB)
+
+	// services
+	jwtService := jwt.NewJwtService(&cfg.JWT)
+	authService := auth.NewAuthService(authRepo)
+	userService := user.NewUserService(userRepo)
+	roomService := room.NewRoomService(roomRepo)
+	chatService := chat.NewChatService(chatRepo)
+
+	roomHub := websocket.NewRoomHub(chatService, roomService)
 	go roomHub.Run()
 
-	router := gin.Default()
+	// handlers
+	wsHandler := handler.NewWSHandler(&userService, roomHub)
 
-	router.Run(fmt.Sprintf(":%d", env.App.Port))
+	//router
+	router.SetupRouter(r, wsHandler, jwtService)
+
+	r.Run(fmt.Sprintf(":%d", env.App.Port))
 }
