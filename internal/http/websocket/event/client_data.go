@@ -1,6 +1,6 @@
-package response
+package event
 
-type UserReponse struct {
+type ClienData struct {
 	ID     uint64  `json:"id"`
 	Name   string  `json:"name"`
 	ImgUrl *string `json:"imgUrl"`
