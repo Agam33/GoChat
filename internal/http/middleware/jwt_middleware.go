@@ -13,7 +13,8 @@ func JwtMiddleware(jwtService jwt.JwtService) gin.HandlerFunc {
 		bearer := c.GetHeader("Authorization")
 		if bearer == "" {
 			c.AbortWithStatusJSON(401, map[string]any{
-				"status":  401,
+				"code":    401,
+				"status":  constant.StatusFailed,
 				"message": "unauthorized",
 			})
 			return
@@ -22,7 +23,8 @@ func JwtMiddleware(jwtService jwt.JwtService) gin.HandlerFunc {
 		s := strings.Split(bearer, " ")
 		if len(s) < 2 || strings.ToLower(s[0]) != "bearer" {
 			c.AbortWithStatusJSON(401, map[string]any{
-				"status":  401,
+				"code":    401,
+				"status":  constant.StatusFailed,
 				"message": "unauthorized",
 			})
 			return
@@ -31,7 +33,8 @@ func JwtMiddleware(jwtService jwt.JwtService) gin.HandlerFunc {
 		usr, err := jwtService.ValidateAccessToken(s[1])
 		if err != nil {
 			c.AbortWithStatusJSON(401, map[string]any{
-				"status":  401,
+				"code":    401,
+				"status":  constant.StatusFailed,
 				"message": "unauthorized",
 			})
 			return

@@ -3,8 +3,8 @@ package websocket
 import (
 	"context"
 	"encoding/json"
-	"go-chat/internal/http/request"
 	"go-chat/internal/http/response"
+	"go-chat/internal/http/websocket/event"
 	"log"
 	"time"
 
@@ -40,24 +40,24 @@ func (c *Client) ReadPump(roomHub *RoomHub) {
 	})
 
 	for {
-		var msgResp response.WsChatResponse
+		var msgResp event.WSMessageEvent
 		if err := c.Conn.ReadJSON(&msgResp); err != nil {
-			log.Printf("error msgReponse %v", err)
+			event.SendWsError(c.Conn, response.NewBadRequestErr("invalid message event", err))
 			break
 		}
 
 		switch msgResp.Type {
 		case "chat.send.text":
-			var sendTextRequest request.SendTextRequest
+			var sendTextRequest event.SendTextEvent
 			if err := json.Unmarshal(msgResp.Data, &sendTextRequest); err != nil {
-				log.Printf("error send request %v", err)
+				event.SendWsError(c.Conn, response.NewBadRequestErr("invalid send text event", err))
 				continue
 			}
 
 		case "chat.reply":
 		case "chat.join":
 		case "room.leave":
-
+		default:
 		}
 	}
 }
@@ -81,11 +81,13 @@ func (c *Client) WritePump() {
 			}
 
 			if err := c.Conn.WriteMessage(websocket.TextMessage, message); err != nil {
+				log.Printf("error ws write: %v", err)
 				return
 			}
 		case <-ticker.C:
 			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				log.Printf("error write deadline %v", err)
 				return
 			}
 		}

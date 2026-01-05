@@ -1,7 +1,7 @@
 package websocket
 
 import (
-	"go-chat/internal/http/request"
+	"go-chat/internal/http/websocket/event"
 	"go-chat/internal/model"
 	"go-chat/internal/services/chat"
 	"go-chat/internal/services/room"
@@ -35,7 +35,7 @@ func NewRoomHub(chatService chat.ChatService, roomService room.RoomService) *Roo
 	}
 }
 
-func (h *RoomHub) SendMessageText(roomId int64, req request.SendTextRequest) {
+func (h *RoomHub) SendMessageText(roomId int64, req event.SendTextEvent) {
 	err := h.chatService.SaveMessage(uint64(roomId), req)
 	if err != nil {
 		log.Printf("error in send message %v", err)
@@ -44,7 +44,7 @@ func (h *RoomHub) SendMessageText(roomId int64, req request.SendTextRequest) {
 }
 
 func (h *RoomHub) GetRoom(roomId int64) (*model.Room, error) {
-	return 0, nil
+	return nil, nil
 }
 
 func (h *RoomHub) Run() {

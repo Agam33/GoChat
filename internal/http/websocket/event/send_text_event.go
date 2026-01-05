@@ -1,6 +1,6 @@
-package request
+package event
 
-type SendTextRequest struct {
+type SendTextEvent struct {
 	Type    string `json:"type"`
 	Message string `json:"message"`
 }

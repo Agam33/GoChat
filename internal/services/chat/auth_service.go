@@ -1,9 +1,12 @@
 package chat
 
-import "go-chat/internal/http/request"
+import (
+	"go-chat/internal/http/request"
+	"go-chat/internal/http/response"
+)
 
 type ChatService interface {
-	SaveMessage(roomId uint64, req request.SendTextRequest) error
+	SaveMessage(roomId uint64, req request.SendTextRequest) (*response.WsChatResponse, error)
 }
 
 type chatService struct {
@@ -16,6 +19,7 @@ func NewChatService(chatRepo ChatRepository) ChatService {
 	}
 }
 
-func (c *chatService) SaveMessage(roomId uint64, req request.SendTextRequest) error {
+func (c *chatService) SaveMessage(roomId uint64, req request.SendTextRequest) (*response.WsChatResponse, error) {
+	
 	return nil
 }
