@@ -1,13 +1,13 @@
 package event
 
 type MessageTextData struct {
-	ID      uint64          `json:"id"`
+	RoomId  uint64          `json:"roomId"`
 	Sender  ClienData       `json:"sender"`
 	Content TextContentData `json:"content"`
 }
 
 type MessageImgData struct {
-	ID      uint64           `json:"id"`
+	RoomId  uint64           `json:"roomId"`
 	Sender  ClienData        `json:"sender"`
 	Content ImageContentData `json:"content"`
 }

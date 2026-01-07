@@ -40,8 +40,8 @@ func SendWsError(conn *websocket.Conn, err error) {
 	})
 
 	frame, _ := json.Marshal(WSMessageEvent{
-		Type: "error",
-		Data: payload,
+		Action: "error",
+		Data:   payload,
 	})
 
 	_ = conn.WriteMessage(websocket.TextMessage, frame)

@@ -1,5 +1,7 @@
 package jwt
 
+import "go-chat/internal/http/response"
+
 type JwtService interface {
 	GenerateAccessToken(userId uint64) (string, error)
 	GenerateRefreshToken(userId uint64) (string, error)
@@ -28,11 +30,11 @@ func (s *jwtService) GenerateRefreshToken(userId uint64) (string, error) {
 func (s *jwtService) ValidateRefreshToken(token string) (*Jwtuser, error) {
 	claims, err := ValidateJWT(token, s.jwtConfig.RefreshSecret)
 	if err != nil {
-		return nil, err
+		return nil, response.NewUnauthorized()
 	}
 
 	if !CheckClaims(claims, "user_id", "exp") {
-		return nil, err
+		return nil, response.NewBadRequestErr("invalid token", err)
 	}
 
 	return &Jwtuser{
@@ -44,11 +46,11 @@ func (s *jwtService) ValidateRefreshToken(token string) (*Jwtuser, error) {
 func (s *jwtService) ValidateAccessToken(token string) (*Jwtuser, error) {
 	claims, err := ValidateJWT(token, s.jwtConfig.AccessSecret)
 	if err != nil {
-		return nil, err
+		return nil, response.NewUnauthorized()
 	}
 
 	if !CheckClaims(claims, "user_id", "exp") {
-		return nil, err
+		return nil, response.NewBadRequestErr("invalid token", err)
 	}
 	return &Jwtuser{
 		UserId: claims["userId"].(int64),

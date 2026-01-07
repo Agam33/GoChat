@@ -5,15 +5,14 @@ import (
 	"go-chat/internal/config"
 	"go-chat/internal/database"
 	"go-chat/internal/env"
-	"go-chat/internal/http/handler"
 	"go-chat/internal/http/middleware"
 	"go-chat/internal/http/router"
-	"go-chat/internal/http/websocket"
 	"go-chat/internal/jwt"
 	"go-chat/internal/services/auth"
 	"go-chat/internal/services/chat"
 	"go-chat/internal/services/room"
 	"go-chat/internal/services/user"
+	"go-chat/internal/websocket"
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -32,6 +31,9 @@ func main() {
 		log.Fatal(err)
 	}
 
+	wsHub := websocket.NewHub()
+	go wsHub.Run()
+
 	r := gin.New()
 	r.Use(gin.Recovery(), gin.Logger())
 	r.Use(middleware.ErrorHandlingMiddleware())
@@ -49,11 +51,8 @@ func main() {
 	roomService := room.NewRoomService(roomRepo)
 	chatService := chat.NewChatService(chatRepo)
 
-	roomHub := websocket.NewRoomHub(chatService, roomService)
-	go roomHub.Run()
-
 	// handlers
-	wsHandler := handler.NewWSHandler(userService, roomHub)
+	wsHandler := websocket.NewWSHandler(wsHub, userService, roomService, chatService)
 
 	//router
 	router.SetupRouter(r, wsHandler, jwtService)

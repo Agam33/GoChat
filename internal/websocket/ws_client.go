@@ -2,9 +2,8 @@ package websocket
 
 import (
 	"context"
-	"encoding/json"
 	"go-chat/internal/http/response"
-	"go-chat/internal/http/websocket/event"
+	"go-chat/internal/websocket/event"
 	"log"
 	"time"
 
@@ -19,17 +18,17 @@ const (
 )
 
 type Client struct {
-	RoomId int64
 	UserId uint64
-	Name   string
-	ImgUrl *string
 	Send   chan []byte
 	Conn   *websocket.Conn
-	Ctx    context.Context
+
+	displayName string
+	avatarURL   string
 }
 
-func (c *Client) ReadPump(roomHub *RoomHub) {
+func (c *Client) ReadPump(ctx context.Context, d Dispatcher) {
 	defer func() {
+		d.Disconnect(c)
 		c.Conn.Close()
 	}()
 	c.Conn.SetReadLimit(maxMessageSize)
@@ -46,18 +45,9 @@ func (c *Client) ReadPump(roomHub *RoomHub) {
 			break
 		}
 
-		switch msgResp.Type {
-		case "chat.send.text":
-			var sendTextRequest event.SendTextEvent
-			if err := json.Unmarshal(msgResp.Data, &sendTextRequest); err != nil {
-				event.SendWsError(c.Conn, response.NewBadRequestErr("invalid send text event", err))
-				continue
-			}
-
-		case "chat.reply":
-		case "chat.join":
-		case "room.leave":
-		default:
+		if err := d.Dispatch(c, msgResp); err != nil {
+			event.SendWsError(c.Conn, err)
+			continue
 		}
 	}
 }

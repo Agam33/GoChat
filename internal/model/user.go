@@ -10,6 +10,6 @@ type User struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 
-	Rooms    []Room    `gorm:"foreignKey:CreatorID"`
-	Messages []Message `gorm:"foreignKey:SenderID"`
+	Rooms    []Room    `gorm:"foreignKey:CreatorID;references:ID"`
+	Messages []Message `gorm:"foreignKey:SenderID;references:ID"`
 }
