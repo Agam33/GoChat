@@ -57,9 +57,10 @@ func main() {
 	// handlers
 	wsHandler := websocket.NewWSHandler(wsHub, userService, roomService, chatService)
 	authHandler := handler.NewAuthHandler(authService)
+	userHandler := handler.NewUserHandler(userService)
 
 	//router
-	router.NewRouter(r, wsHandler, jwtService, authHandler)
+	router.NewRouter(r, wsHandler, jwtService, authHandler, userHandler)
 
 	r.Run(fmt.Sprintf(":%d", env.App.Port))
 }
