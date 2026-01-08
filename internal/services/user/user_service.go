@@ -27,7 +27,7 @@ func (us *userService) GetById(ctx context.Context, userId uint64) (*response.Us
 
 	return &response.UserResponse{
 		ID:     userId,
-		Name:   usr.Name,
+		Name:   usr.Username,
 		ImgUrl: usr.ImgUrl,
 	}, nil
 }

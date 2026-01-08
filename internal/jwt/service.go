@@ -1,6 +1,11 @@
 package jwt
 
-import "go-chat/internal/http/response"
+import (
+	"go-chat/internal/http/response"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+)
 
 type JwtService interface {
 	GenerateAccessToken(userId uint64) (string, error)
@@ -20,11 +25,21 @@ func NewJwtService(jwtConfig *JwtConfig) JwtService {
 }
 
 func (s *jwtService) GenerateAccessToken(userId uint64) (string, error) {
-	return "", nil
+	claims := jwt.MapClaims{
+		"userID": userId,
+		"exp":    time.Now().Add(s.jwtConfig.AccessExpire).Unix(),
+	}
+
+	return GenerateJWT(claims, s.jwtConfig.AccessSecret)
 }
 
 func (s *jwtService) GenerateRefreshToken(userId uint64) (string, error) {
-	return "", nil
+	claims := jwt.MapClaims{
+		"userID": userId,
+		"exp":    time.Now().Add(s.jwtConfig.RefreshExpire).Unix(),
+	}
+
+	return GenerateJWT(claims, s.jwtConfig.RefreshSecret)
 }
 
 func (s *jwtService) ValidateRefreshToken(token string) (*Jwtuser, error) {

@@ -4,7 +4,7 @@ import "time"
 
 type User struct {
 	ID        uint64
-	Name      string
+	Username  string `gorm:"unique"`
 	Password  string
 	ImgUrl    *string
 	CreatedAt time.Time
