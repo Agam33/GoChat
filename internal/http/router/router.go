@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func NewRouter(router *gin.Engine, wsHandler websocket.WsHandler, jwtService jwt.JwtService, authHandler handler.AuthHandler) {
+func NewRouter(router *gin.Engine, wsHandler websocket.WsHandler, jwtService jwt.JwtService, authHandler handler.AuthHandler, userHandler handler.UserHandler) {
 	api := router.Group("/api")
 
 	// websocket
@@ -25,8 +25,10 @@ func NewRouter(router *gin.Engine, wsHandler websocket.WsHandler, jwtService jwt
 
 	{
 		// need authorization
-		v1 := api.Group("/v1")
+		v1 := api.Group("/v1", middleware.JwtMiddleware(jwtService))
 		v1.POST("/auth/logout", authHandler.Logout)
+
+		v1.GET("/user/profile", userHandler.GetProfile)
 	}
 
 	router.NoRoute(middleware.NoRouteMiddleware())
