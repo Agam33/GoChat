@@ -5,5 +5,5 @@ const (
 	StatusSuccess = "success"
 	StatusError   = "error"
 
-	CtxUserIDKey = "user_id"
+	CtxUserIDKey = "userID"
 )

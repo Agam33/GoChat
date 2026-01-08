@@ -5,6 +5,7 @@ import (
 	"go-chat/internal/config"
 	"go-chat/internal/database"
 	"go-chat/internal/env"
+	"go-chat/internal/http/handler"
 	"go-chat/internal/http/middleware"
 	"go-chat/internal/http/router"
 	"go-chat/internal/jwt"
@@ -35,6 +36,8 @@ func main() {
 	go wsHub.Run()
 
 	r := gin.New()
+
+	// middleware
 	r.Use(gin.Recovery(), gin.Logger())
 	r.Use(middleware.ErrorHandlingMiddleware())
 
@@ -46,18 +49,17 @@ func main() {
 
 	// services
 	jwtService := jwt.NewJwtService(&cfg.JWT)
-	authService := auth.NewAuthService(authRepo)
+	authService := auth.NewAuthService(authRepo, jwtService)
 	userService := user.NewUserService(userRepo)
 	roomService := room.NewRoomService(roomRepo)
 	chatService := chat.NewChatService(chatRepo)
 
 	// handlers
 	wsHandler := websocket.NewWSHandler(wsHub, userService, roomService, chatService)
+	authHandler := handler.NewAuthHandler(authService)
 
 	//router
-	router.SetupRouter(r, wsHandler, jwtService)
-
-	r.NoRoute(middleware.NoRouteMiddleware())
+	router.NewRouter(r, wsHandler, jwtService, authHandler)
 
 	r.Run(fmt.Sprintf(":%d", env.App.Port))
 }
