@@ -9,7 +9,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func NewRouter(router *gin.Engine, wsHandler websocket.WsHandler, jwtService jwt.JwtService, authHandler handler.AuthHandler, userHandler handler.UserHandler) {
+func NewRouter(
+	router *gin.Engine,
+	wsHandler websocket.WsHandler,
+	jwtService jwt.JwtService,
+	authHandler handler.AuthHandler,
+	userHandler handler.UserHandler,
+	roomHandler handler.RoomHandler,
+) {
 	api := router.Group("/api")
 
 	// websocket
@@ -29,6 +36,10 @@ func NewRouter(router *gin.Engine, wsHandler websocket.WsHandler, jwtService jwt
 		v1.POST("/auth/logout", authHandler.Logout)
 
 		v1.GET("/user/profile", userHandler.GetProfile)
+		v1.GET("/user/rooms", userHandler.GetUserRooms)
+
+		v1.GET("/room/:id/messages", roomHandler.GetMessages)
+		v1.DELETE("/room/:id", roomHandler.DeleteRoom)
 	}
 
 	router.NoRoute(middleware.NoRouteMiddleware())

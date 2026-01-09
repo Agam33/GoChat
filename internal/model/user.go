@@ -1,6 +1,10 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 type User struct {
 	ID        uint64
@@ -9,6 +13,8 @@ type User struct {
 	ImgUrl    *string
 	CreatedAt time.Time
 	UpdatedAt time.Time
+
+	DeletedAt gorm.DeletedAt `gorm:"index"`
 
 	Rooms    []Room    `gorm:"foreignKey:CreatorID;references:ID"`
 	Messages []Message `gorm:"foreignKey:SenderID;references:ID"`

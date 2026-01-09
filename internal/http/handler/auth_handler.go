@@ -55,7 +55,7 @@ func (h *authHandler) RefreshToken(c *gin.Context) {
 	if t == "" {
 		var req request.GetRefreshToken
 
-		if err := c.BindJSON(&req); err != nil {
+		if err := c.ShouldBind(&req); err != nil {
 			c.Error(response.NewBadRequestErr("need request token", err))
 			return
 		}
@@ -79,7 +79,7 @@ func (h *authHandler) RefreshToken(c *gin.Context) {
 
 func (h *authHandler) SignIn(c *gin.Context) {
 	var req request.SignInRequst
-	if err := c.BindJSON(&req); err != nil {
+	if err := c.ShouldBind(&req); err != nil {
 		c.Error(response.NewBadRequestErr("invalid request signIn", err))
 		return
 	}
@@ -100,7 +100,7 @@ func (h *authHandler) SignIn(c *gin.Context) {
 
 func (h *authHandler) SignUp(c *gin.Context) {
 	var req request.SignUpRequest
-	if err := c.BindJSON(&req); err != nil {
+	if err := c.ShouldBind(&req); err != nil {
 		c.Error(response.NewBadRequestErr("invalid request signUp", err))
 		return
 	}
