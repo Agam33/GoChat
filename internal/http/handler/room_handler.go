@@ -2,6 +2,7 @@ package handler
 
 import (
 	"go-chat/internal/constant"
+	"go-chat/internal/http/request"
 	"go-chat/internal/http/response"
 	"go-chat/internal/services/room"
 	"go-chat/internal/utils"
@@ -12,6 +13,8 @@ import (
 )
 
 type RoomHandler interface {
+	JoinRoom(c *gin.Context)
+	CreateRoom(c *gin.Context)
 	DeleteRoom(c *gin.Context)
 	GetMessages(c *gin.Context)
 }
@@ -24,6 +27,56 @@ func NewRoomHandler(roomService room.RoomService) RoomHandler {
 	return &roomHandler{
 		roomService: roomService,
 	}
+}
+
+func (h *roomHandler) JoinRoom(c *gin.Context) {
+	var req request.JoinRoomRequst
+	if err := c.ShouldBind(&req); err != nil {
+		c.Error(response.NewBadRequestErr("invalid request join room", err))
+		return
+	}
+
+	userId, err := utils.GetUserID(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	resp, err := h.roomService.JoinRoom(c.Request.Context(), req.RoomId, userId)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, response.SuccessReponse[response.BoolResponse]{
+		Message: constant.StatusSuccess,
+		Data:    resp,
+	})
+}
+
+func (h *roomHandler) CreateRoom(c *gin.Context) {
+	var req request.CreateRoomRequest
+	if err := c.ShouldBind(&req); err != nil {
+		c.Error(response.NewBadRequestErr("invalid request create room ", err))
+		return
+	}
+
+	userId, err := utils.GetUserID(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	resp, err := h.roomService.CreateRoom(c.Request.Context(), userId, &req)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, response.SuccessReponse[response.BoolResponse]{
+		Message: constant.StatusSuccess,
+		Data:    resp,
+	})
 }
 
 func (h *roomHandler) DeleteRoom(c *gin.Context) {
@@ -51,10 +104,6 @@ func (h *roomHandler) DeleteRoom(c *gin.Context) {
 	})
 }
 
-func (h *roomHandler) CreateRoom(c *gin.Context) {
-
-}
-
 func (h *roomHandler) GetMessages(c *gin.Context) {
 	roomIdq := c.Query("id")
 	if roomIdq == "" {
@@ -68,7 +117,7 @@ func (h *roomHandler) GetMessages(c *gin.Context) {
 		return
 	}
 
-	pagination, err := utils.GetPagination(c)
+	pagination, meta, err := utils.GetPagination(c)
 	if err != nil {
 		c.Error(err)
 		return
@@ -83,10 +132,6 @@ func (h *roomHandler) GetMessages(c *gin.Context) {
 	c.JSON(http.StatusOK, response.SuccessReponseWithMeta[[]response.RoomMessageResponse]{
 		Message: constant.StatusSuccess,
 		Data:    resp,
-		Meta: map[string]any{
-			"nextPage":     pagination.Page + 1,
-			"previousPage": pagination.Page - 1,
-			"currentPage":  pagination.Page,
-		},
+		Meta:    meta,
 	})
 }

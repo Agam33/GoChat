@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"go-chat/internal/model"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -20,7 +21,10 @@ func Connect(dbCfg *DBConfig) (*gorm.DB, error) {
 	}
 
 	if err := db.AutoMigrate(
-	// model
+		&model.User{},
+		&model.Room{},
+		&model.UserRoom{},
+		&model.Message{},
 	); err != nil {
 		return nil, err
 	}

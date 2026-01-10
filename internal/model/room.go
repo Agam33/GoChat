@@ -3,8 +3,8 @@ package model
 import "time"
 
 type Room struct {
-	ID        uint64
-	CreatorID uint64
+	ID        uint64 `gorm:"primaryKey;not null"`
+	CreatorID uint64 `gorm:"not null"`
 	Name      string
 	ImgUrl    *string
 	CreatedAt time.Time

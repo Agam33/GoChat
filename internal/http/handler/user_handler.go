@@ -32,7 +32,7 @@ func (h *userHandler) GetUserRooms(c *gin.Context) {
 		return
 	}
 
-	pagination, err := utils.GetPagination(c)
+	pagination, meta, err := utils.GetPagination(c)
 	if err != nil {
 		c.Error(err)
 		return
@@ -47,11 +47,7 @@ func (h *userHandler) GetUserRooms(c *gin.Context) {
 	c.JSON(http.StatusOK, response.SuccessReponseWithMeta[[]response.GetRoomResponse]{
 		Message: constant.StatusSuccess,
 		Data:    resp,
-		Meta: map[string]any{
-			"previousPage": pagination.Page - 1,
-			"nextPage":     pagination.Page + 1,
-			"currPage":     pagination.Page,
-		},
+		Meta:    meta,
 	})
 }
 

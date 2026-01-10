@@ -38,8 +38,10 @@ func NewRouter(
 		v1.GET("/user/profile", userHandler.GetProfile)
 		v1.GET("/user/rooms", userHandler.GetUserRooms)
 
+		v1.GET("/room/create", roomHandler.CreateRoom)
 		v1.GET("/room/:id/messages", roomHandler.GetMessages)
 		v1.DELETE("/room/:id", roomHandler.DeleteRoom)
+		v1.POST("/room/:id/join", roomHandler.JoinRoom)
 	}
 
 	router.NoRoute(middleware.NoRouteMiddleware())

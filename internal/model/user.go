@@ -7,7 +7,7 @@ import (
 )
 
 type User struct {
-	ID        uint64
+	ID        uint64 `gorm:"primaryKey;not null"`
 	Username  string `gorm:"unique"`
 	Password  string
 	ImgUrl    *string

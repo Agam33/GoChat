@@ -1,13 +1,9 @@
 package event
 
-type MessageTextData struct {
+import "encoding/json"
+
+type MessageData struct {
 	RoomId  uint64          `json:"roomId"`
 	Sender  ClienData       `json:"sender"`
-	Content TextContentData `json:"content"`
-}
-
-type MessageImgData struct {
-	RoomId  uint64           `json:"roomId"`
-	Sender  ClienData        `json:"sender"`
-	Content ImageContentData `json:"content"`
+	Content json.RawMessage `json:"content"`
 }

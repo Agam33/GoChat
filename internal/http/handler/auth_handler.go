@@ -46,24 +46,9 @@ func (h *authHandler) Logout(c *gin.Context) {
 }
 
 func (h *authHandler) RefreshToken(c *gin.Context) {
-	t, err := c.Cookie("refreshToken")
-	if err != nil {
-		c.Error(response.NewUnauthorized())
-		return
-	}
+	token := c.GetString(constant.Authorization)
 
-	if t == "" {
-		var req request.GetRefreshToken
-
-		if err := c.ShouldBind(&req); err != nil {
-			c.Error(response.NewBadRequestErr("need request token", err))
-			return
-		}
-
-		t = req.RefreshToken
-	}
-
-	resp, err := h.authService.RefreshToken(t)
+	resp, err := h.authService.RefreshToken(token)
 	if err != nil {
 		c.Error(err)
 		return

@@ -5,5 +5,8 @@ const (
 	StatusSuccess = "success"
 	StatusError   = "error"
 
-	CtxUserIDKey = "userID"
+	CtxUserIDKey    = "userID"
+	CtxRefreshToken = "refreshToken"
+
+	Authorization = "Authorization"
 )

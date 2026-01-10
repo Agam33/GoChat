@@ -31,28 +31,36 @@ func SetRefreshTokenCookie(c *gin.Context, refreshToken string) {
 	)
 }
 
-func GetPagination(c *gin.Context) (*types.Pagination, error) {
+func GetPagination(c *gin.Context) (*types.Pagination, types.Meta, error) {
 	limitq := c.Query("limit")
 	pageq := c.Query("page")
 
 	limit, err := strconv.Atoi(limitq)
 	if err != nil {
-		return nil, response.NewBadRequestErr("limit should be int", err)
+		return nil, types.Meta{}, response.NewBadRequestErr("limit should be int", err)
 	}
 
 	page, err := strconv.Atoi(pageq)
 	if err != nil {
-		return nil, response.NewBadRequestErr("page should be int", err)
+		return nil, types.Meta{}, response.NewBadRequestErr("page should be int", err)
 	}
 
 	if limit <= 0 {
 		limit = 10
 	}
 
+	if page <= 0 {
+		page = 1
+	}
+
 	return &types.Pagination{
-		Limit: limit,
-		Page:  page,
-	}, nil
+			Limit: limit,
+			Page:  page,
+		}, types.Meta{
+			"nextPage": page + 1,
+			"prevPage": page - 1,
+			"currPage": page,
+		}, nil
 }
 
 func PageOffset(page int, limit int) int {
