@@ -11,10 +11,11 @@ import (
 )
 
 type RoomRepository interface {
-	DeleteRoom(context.Context, uint64) error
-	GetRoomMessages(context.Context, uint64, *types.Pagination) ([]model.Message, error)
-	CreateRoom(context.Context, *model.Room) error
-	GetById(context.Context, uint64) (*model.Room, error)
+	JoinRoom(ctx context.Context, room *model.UserRoom) error
+	DeleteRoom(ctx context.Context, roomId uint64) error
+	GetRoomMessages(ctx context.Context, roomId uint64, pagination *types.Pagination) ([]model.Message, error)
+	CreateRoom(ctx context.Context, room *model.Room) error
+	GetById(ctx context.Context, roomId uint64) (*model.Room, error)
 }
 
 type roomRepository struct {
@@ -25,6 +26,15 @@ func NewRoomRepository(db *gorm.DB) RoomRepository {
 	return &roomRepository{
 		db: db,
 	}
+}
+
+func (r *roomRepository) JoinRoom(ctx context.Context, room *model.UserRoom) error {
+	err := r.db.WithContext(ctx).Where("room_id = ?", room.RoomID).Create(room).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *roomRepository) DeleteRoom(ctx context.Context, roomId uint64) error {

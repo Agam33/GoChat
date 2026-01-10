@@ -9,7 +9,7 @@ import (
 
 func RequestTimeOut() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ctx, cancel := context.WithTimeout(c.Request.Context(), time.Minute*2)
+		ctx, cancel := context.WithTimeout(c.Request.Context(), time.Minute*3)
 		defer cancel()
 
 		c.Request = c.Request.WithContext(ctx)

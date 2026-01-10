@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"go-chat/internal/constant"
+	"go-chat/internal/http/response"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -9,10 +9,10 @@ import (
 
 func NoRouteMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		ctx.AbortWithStatusJSON(http.StatusNotFound, gin.H{
-			"code":    http.StatusNotFound,
-			"status":  constant.StatusError,
-			"message": "route not found",
+		ctx.Error(&response.AppErr{
+			Code:    http.StatusNotFound,
+			Message: "invalid route",
+			Err:     nil,
 		})
 	}
 }
