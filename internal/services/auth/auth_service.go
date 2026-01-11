@@ -95,9 +95,10 @@ func (as *authService) SignIn(ctx context.Context, req *request.SignInRequst) (r
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return response.SignInResponse{}, response.NewNotFoundErr("user not found", err)
 		}
+		return response.SignInResponse{}, response.NewInternalServerErr("error find user by username (service)", err)
 	}
 
-	if ok := utils.ValidatePassword(req.Password, usr.Password); !ok {
+	if !utils.ValidatePassword(usr.Password, req.Password) {
 		return response.SignInResponse{}, response.NewBadRequestErr("wrong password", err)
 	}
 

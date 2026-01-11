@@ -63,9 +63,27 @@ func (r *roomRepository) GetRoomMessages(ctx context.Context, roomId uint64, pag
 }
 
 func (r *roomRepository) CreateRoom(ctx context.Context, room *model.Room) error {
-	if err := r.db.WithContext(ctx).Create(room).Error; err != nil {
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := r.db.WithContext(ctx).Create(room).Error; err != nil {
+			return err
+		}
+
+		userRoom := &model.UserRoom{
+			UserID: room.CreatorID,
+			RoomID: room.ID,
+			Role:   "owner",
+		}
+
+		if err := r.db.WithContext(ctx).Create(userRoom).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
 		return err
 	}
+
 	return nil
 }
 

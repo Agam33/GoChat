@@ -1,0 +1,41 @@
+services:
+  backend:
+    container_name: gochat_api
+    build: .
+    depends_on:
+      - db
+    ports:
+      - "${APP_PORT}:${APP_PORT}"
+    restart: no
+    environment:
+      - APP_PORT=${APP_PORT}
+
+      # jwt
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - JWT_ACCESS_EXP=${JWT_ACCESS_EXP}
+      - JWT_REFRESH_EXP=${JWT_REFRESH_EXP}
+
+      # database
+      - DB_HOST=${DB_HOST}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DB_PORT=${DB_PORT}
+      - DB_SSLMODE=${DB_SSLMODE}
+
+  db:
+    container_name: gochat_db
+    image: postgres:15
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
+    environment:
+      POSTGRES_USER: "${DB_USER}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD}"
+      POSTGRES_DB: "${DB_NAME}"
+    volumes:
+      - db_data:/var/lib/postgresql/data    
+    restart: no
+
+volumes:
+  db_data:

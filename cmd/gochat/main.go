@@ -38,8 +38,11 @@ func main() {
 	r := gin.New()
 
 	// middleware
-	r.Use(gin.Recovery(), gin.Logger())
-	r.Use(middleware.ErrorHandlingMiddleware())
+	r.Use(
+		gin.Recovery(),
+		gin.Logger(),
+		middleware.ErrorHandlingMiddleware(),
+	)
 
 	// repos
 	authRepo := auth.NewAuthReposeitory(psqlDB)

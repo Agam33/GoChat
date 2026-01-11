@@ -26,7 +26,7 @@ func NewJwtService(jwtConfig *JwtConfig) JwtService {
 
 func (s *jwtService) GenerateAccessToken(userId uint64) (string, error) {
 	claims := jwt.MapClaims{
-		"userID": userId,
+		"userId": userId,
 		"exp":    time.Now().Add(s.jwtConfig.AccessExpire).Unix(),
 	}
 
@@ -35,7 +35,7 @@ func (s *jwtService) GenerateAccessToken(userId uint64) (string, error) {
 
 func (s *jwtService) GenerateRefreshToken(userId uint64) (string, error) {
 	claims := jwt.MapClaims{
-		"userID": userId,
+		"userId": userId,
 		"exp":    time.Now().Add(s.jwtConfig.RefreshExpire).Unix(),
 	}
 
@@ -48,12 +48,17 @@ func (s *jwtService) ValidateRefreshToken(token string) (*Jwtuser, error) {
 		return nil, response.NewUnauthorized()
 	}
 
-	if !CheckClaims(claims, "user_id", "exp") {
+	if !CheckClaims(claims, "userId", "exp") {
 		return nil, response.NewBadRequestErr("invalid token", err)
 	}
 
+	uidFloat, ok := claims["userId"].(float64)
+	if !ok {
+		return nil, response.NewBadRequestErr("invalid userId claim", nil)
+	}
+
 	return &Jwtuser{
-		UserId: claims["userId"].(int64),
+		UserId: int64(uidFloat),
 		Claims: &claims,
 	}, nil
 }
@@ -64,11 +69,17 @@ func (s *jwtService) ValidateAccessToken(token string) (*Jwtuser, error) {
 		return nil, response.NewUnauthorized()
 	}
 
-	if !CheckClaims(claims, "user_id", "exp") {
+	if !CheckClaims(claims, "userId", "exp") {
 		return nil, response.NewBadRequestErr("invalid token", err)
 	}
+
+	uidFloat, ok := claims["userId"].(float64)
+	if !ok {
+		return nil, response.NewBadRequestErr("invalid userId claim", nil)
+	}
+
 	return &Jwtuser{
-		UserId: claims["userId"].(int64),
+		UserId: int64(uidFloat),
 		Claims: &claims,
 	}, nil
 }

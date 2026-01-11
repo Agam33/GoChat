@@ -26,11 +26,7 @@ func NewUserHandler(userService user.UserService) UserHandler {
 }
 
 func (h *userHandler) GetUserRooms(c *gin.Context) {
-	userId, err := utils.GetUserID(c)
-	if err != nil {
-		c.Error(err)
-		return
-	}
+	userId := c.GetInt64(constant.CtxUserIDKey)
 
 	pagination, meta, err := utils.GetPagination(c)
 	if err != nil {
@@ -52,11 +48,7 @@ func (h *userHandler) GetUserRooms(c *gin.Context) {
 }
 
 func (h *userHandler) GetProfile(c *gin.Context) {
-	userId, err := utils.GetUserID(c)
-	if err != nil {
-		c.Error(err)
-		return
-	}
+	userId := c.GetInt64(constant.CtxUserIDKey)
 
 	resp, err := h.userService.GetById(c.Request.Context(), uint64(userId))
 	if err != nil {

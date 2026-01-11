@@ -13,7 +13,7 @@ type Message struct {
 
 	ReplyID *uint64 `gorm:"index"`
 
-	ContentType string         `gorm:"check:type IN ('text', 'image', 'system')"`
+	ContentType string         `gorm:"check:content_type IN ('text', 'image', 'system')"`
 	Content     datatypes.JSON `gorm:"type:jsonb"`
 
 	CreatedAt time.Time

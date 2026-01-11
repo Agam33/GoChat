@@ -28,6 +28,7 @@ func (r *userRepository) GetUserRooms(ctx context.Context, userId uint64, pagina
 	var rooms []model.UserRoom
 	err := r.db.WithContext(ctx).
 		Where("user_id = ?", userId).
+		Order("created_at DESC").
 		Preload("Room").
 		Limit(pagination.Limit).
 		Offset(utils.PageOffset(pagination.Page, pagination.Limit)).

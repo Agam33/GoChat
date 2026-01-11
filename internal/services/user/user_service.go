@@ -33,7 +33,7 @@ func (us *userService) GetUserRooms(ctx context.Context, userId uint64, paginati
 		return []response.GetRoomResponse{}, response.NewInternalServerErr(err.Error(), err)
 	}
 
-	var res []response.GetRoomResponse
+	res := make([]response.GetRoomResponse, 0, len(rooms))
 	for _, room := range rooms {
 		res = append(res, response.GetRoomResponse{
 			ID:        room.Room.ID,

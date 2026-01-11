@@ -26,10 +26,15 @@ type Hub struct {
 
 func NewHub() *Hub {
 	return &Hub{
-		Topics:     make(map[string]map[*Client]struct{}),
+		Topics: make(map[string]map[*Client]struct{}),
+
 		register:   make(chan *Client, 256),
 		unregister: make(chan *Client, 256),
-		broadcast:  make(chan BroadcastMessage, 512),
+
+		subscribe:   make(chan *Subscriber, 256),
+		unsubscribe: make(chan *Subscriber, 256),
+
+		broadcast: make(chan BroadcastMessage, 512),
 	}
 }
 
@@ -47,8 +52,15 @@ func (h *Hub) Run() {
 				}
 			}
 
+			close(client.Send)
+
 		case sub := <-h.subscribe:
-			h.Topics[sub.Topic] = map[*Client]struct{}{}
+			clients, ok := h.Topics[sub.Topic]
+			if !ok {
+				clients = make(map[*Client]struct{})
+				h.Topics[sub.Topic] = clients
+			}
+			clients[sub.C] = struct{}{}
 
 		case sub := <-h.unsubscribe:
 			clients := h.Topics[sub.Topic]
@@ -60,7 +72,6 @@ func (h *Hub) Run() {
 				select {
 				case c.Send <- msg.Data:
 				default:
-					close(c.Send)
 					delete(clients, c)
 				}
 			}

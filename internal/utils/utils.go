@@ -1,8 +1,6 @@
 package utils
 
 import (
-	"go-chat/internal/constant"
-	"go-chat/internal/http/response"
 	"go-chat/internal/utils/types"
 	"strconv"
 
@@ -10,8 +8,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func ValidatePassword(password string, old string) bool {
-	return bcrypt.CompareHashAndPassword([]byte(password), []byte(old)) == nil
+func ValidatePassword(hash string, password string) bool {
+	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
 }
 
 func HashPassword(password string) (string, bool) {
@@ -37,12 +35,12 @@ func GetPagination(c *gin.Context) (*types.Pagination, types.Meta, error) {
 
 	limit, err := strconv.Atoi(limitq)
 	if err != nil {
-		return nil, types.Meta{}, response.NewBadRequestErr("limit should be int", err)
+		limit = 10
 	}
 
 	page, err := strconv.Atoi(pageq)
 	if err != nil {
-		return nil, types.Meta{}, response.NewBadRequestErr("page should be int", err)
+		page = 1
 	}
 
 	if limit <= 0 {
@@ -65,18 +63,4 @@ func GetPagination(c *gin.Context) (*types.Pagination, types.Meta, error) {
 
 func PageOffset(page int, limit int) int {
 	return (page - 1) * limit
-}
-
-func GetUserID(c *gin.Context) (uint64, error) {
-	usrIdAny, isExists := c.Get(constant.CtxUserIDKey)
-	if !isExists {
-		return 0, response.NewUnauthorized()
-	}
-
-	userId, ok := usrIdAny.(uint64)
-	if !ok {
-		return 0, response.NewUnauthorized()
-	}
-
-	return userId, nil
 }
