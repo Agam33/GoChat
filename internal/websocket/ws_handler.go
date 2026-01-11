@@ -262,18 +262,27 @@ func (h *wsHandler) roomSendText(c *Client, sendText event.SendTextEvent) error 
 }
 
 func (h *wsHandler) ServeWS(c *gin.Context) {
+	// prevent wrong client
+	if !websocket.IsWebSocketUpgrade(c.Request) {
+		c.JSON(http.StatusBadRequest, response.NewBadRequestErr("can't upgrade to websocket", nil))
+		return
+	}
+
 	userId := c.GetUint64(constant.CtxUserIDKey)
 
 	conn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		fmt.Printf("can't serve websocket: %v", err)
-		c.Error(response.NewInternalServerErr("error upgrader in ServeChatWs", err))
 		return
 	}
 
 	usr, err := h.userService.GetById(c.Request.Context(), userId)
 	if err != nil {
-		c.Error(err)
+		conn.WriteMessage(
+			websocket.CloseMessage,
+			websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "unauthorized"),
+		)
+		conn.Close()
 		return
 	}
 
@@ -287,6 +296,6 @@ func (h *wsHandler) ServeWS(c *gin.Context) {
 
 	h.hub.register <- client
 
-	go client.ReadPump(c.Request.Context(), h)
+	go client.ReadPump(h)
 	go client.WritePump()
 }

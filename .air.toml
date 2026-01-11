@@ -2,7 +2,7 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-cmd = "APP_ENV=dev go build -o ./tmp/main ./cmd/gochat/"
+cmd = "go build -o ./tmp/main ./cmd/gochat/"
 bin = "./tmp/main"
 include_ext = ["go"]
 exclude_dir = ["vendor", "tmp"]

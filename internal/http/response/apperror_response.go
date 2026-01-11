@@ -10,7 +10,7 @@ type AppErr struct {
 
 func (e *AppErr) Error() string {
 	if e.Err != nil {
-		return e.Error()
+		return e.Err.Error()
 	}
 
 	return e.Message

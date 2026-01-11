@@ -20,6 +20,7 @@ func NewAppConfig(env *env.Env) *Config {
 			RefreshSecret: env.JWT.RefreshSecret,
 		},
 		DBConfig: database.DBConfig{
+			User:     env.Database.User,
 			Host:     env.Database.Host,
 			Port:     env.Database.Port,
 			DBName:   env.Database.DBName,

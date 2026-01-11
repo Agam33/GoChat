@@ -1,7 +1,8 @@
 package websocket
 
 import (
-	"context"
+	"encoding/json"
+	"errors"
 	"go-chat/internal/http/response"
 	"go-chat/internal/websocket/event"
 	"log"
@@ -26,7 +27,7 @@ type Client struct {
 	avatarURL   string
 }
 
-func (c *Client) ReadPump(ctx context.Context, d Dispatcher) {
+func (c *Client) ReadPump(d Dispatcher) {
 	defer func() {
 		d.Disconnect(c)
 		c.Conn.Close()
@@ -41,12 +42,22 @@ func (c *Client) ReadPump(ctx context.Context, d Dispatcher) {
 	for {
 		var msgResp event.WSMessageEvent
 		if err := c.Conn.ReadJSON(&msgResp); err != nil {
-			event.SendWsError(c.Conn, response.NewBadRequestErr("invalid message event", err))
 			break
 		}
 
 		if err := d.Dispatch(c, msgResp); err != nil {
-			event.SendWsError(c.Conn, err)
+			var apperr *response.AppErr
+			if errors.As(err, &apperr) {
+				errJsn, _ := json.Marshal(apperr)
+
+				select {
+				case c.Send <- errJsn:
+				default:
+					return
+				}
+			} else {
+				log.Printf("[INTERNAL SERVER ERROR] (ReadPump) %v", err)
+			}
 			continue
 		}
 	}

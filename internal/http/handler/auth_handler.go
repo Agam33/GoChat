@@ -46,7 +46,7 @@ func (h *authHandler) Logout(c *gin.Context) {
 }
 
 func (h *authHandler) RefreshToken(c *gin.Context) {
-	token := c.GetString(constant.Authorization)
+	token := c.GetString(constant.CtxRefreshToken)
 
 	resp, err := h.authService.RefreshToken(token)
 	if err != nil {

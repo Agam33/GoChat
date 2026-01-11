@@ -1,8 +1,11 @@
 package database
 
 import (
+	"errors"
 	"fmt"
 	"go-chat/internal/model"
+	"log"
+	"time"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -20,6 +23,24 @@ func Connect(dbCfg *DBConfig) (*gorm.DB, error) {
 		return nil, err
 	}
 
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+
+	maxRetries := 10
+	for i := 1; i <= maxRetries; i++ {
+		if err := sqlDB.Ping(); err == nil {
+			break
+		}
+		log.Println("waiting for database")
+		time.Sleep(2 * time.Second)
+
+		if i == maxRetries {
+			return nil, errors.New("database not ready after retries")
+		}
+	}
+
 	if err := db.AutoMigrate(
 		&model.User{},
 		&model.Room{},
@@ -28,6 +49,5 @@ func Connect(dbCfg *DBConfig) (*gorm.DB, error) {
 	); err != nil {
 		return nil, err
 	}
-
 	return db, nil
 }

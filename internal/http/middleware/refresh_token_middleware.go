@@ -3,6 +3,7 @@ package middleware
 import (
 	"go-chat/internal/constant"
 	"go-chat/internal/http/response"
+	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -17,14 +18,14 @@ func RefreshTokenMiddleware() gin.HandlerFunc {
 		}
 
 		if token == "" {
-			auth := c.GetHeader(constant.Authorization)
+			auth := c.GetHeader("X-Refresh-Token")
 			if strings.HasPrefix(auth, "Bearer ") {
 				token = strings.TrimPrefix(auth, "Bearer ")
 			}
 		}
 
 		if token == "" {
-			c.Error(response.NewUnauthorized())
+			c.AbortWithStatusJSON(http.StatusUnauthorized, response.NewUnauthorized())
 			return
 		}
 

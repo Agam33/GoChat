@@ -36,13 +36,9 @@ func (h *roomHandler) JoinRoom(c *gin.Context) {
 		return
 	}
 
-	userId, err := utils.GetUserID(c)
-	if err != nil {
-		c.Error(err)
-		return
-	}
+	userId := c.GetInt64(constant.CtxUserIDKey)
 
-	resp, err := h.roomService.JoinRoom(c.Request.Context(), req.RoomId, userId)
+	resp, err := h.roomService.JoinRoom(c.Request.Context(), req.RoomId, uint64(userId))
 	if err != nil {
 		c.Error(err)
 		return
@@ -61,13 +57,9 @@ func (h *roomHandler) CreateRoom(c *gin.Context) {
 		return
 	}
 
-	userId, err := utils.GetUserID(c)
-	if err != nil {
-		c.Error(err)
-		return
-	}
+	userId := c.GetInt64(constant.CtxUserIDKey)
 
-	resp, err := h.roomService.CreateRoom(c.Request.Context(), userId, &req)
+	resp, err := h.roomService.CreateRoom(c.Request.Context(), uint64(userId), &req)
 	if err != nil {
 		c.Error(err)
 		return
@@ -80,7 +72,7 @@ func (h *roomHandler) CreateRoom(c *gin.Context) {
 }
 
 func (h *roomHandler) DeleteRoom(c *gin.Context) {
-	roomIdq := c.Query("id")
+	roomIdq := c.Param("id")
 	if roomIdq == "" {
 		c.Error(response.NewBadRequestErr("room id not found", nil))
 		return
@@ -105,7 +97,7 @@ func (h *roomHandler) DeleteRoom(c *gin.Context) {
 }
 
 func (h *roomHandler) GetMessages(c *gin.Context) {
-	roomIdq := c.Query("id")
+	roomIdq := c.Param("id")
 	if roomIdq == "" {
 		c.Error(response.NewBadRequestErr("room id not found", nil))
 		return
