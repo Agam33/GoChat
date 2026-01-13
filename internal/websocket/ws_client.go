@@ -1,9 +1,6 @@
 package websocket
 
 import (
-	"encoding/json"
-	"errors"
-	"go-chat/internal/http/response"
 	"go-chat/internal/websocket/event"
 	"log"
 	"time"
@@ -12,8 +9,8 @@ import (
 )
 
 const (
-	writeWait      = 15 * time.Second
-	pongWait       = 60 * time.Second
+	writeWait      = 80 * time.Second
+	pongWait       = 130 * time.Second
 	pingPeriod     = (pongWait * 9) / 10
 	maxMessageSize = 512
 )
@@ -24,7 +21,7 @@ type Client struct {
 	Conn   *websocket.Conn
 
 	displayName string
-	avatarURL   string
+	avatarURL   *string
 }
 
 func (c *Client) ReadPump(d Dispatcher) {
@@ -45,19 +42,7 @@ func (c *Client) ReadPump(d Dispatcher) {
 			break
 		}
 
-		if err := d.Dispatch(c, msgResp); err != nil {
-			var apperr *response.AppErr
-			if errors.As(err, &apperr) {
-				errJsn, _ := json.Marshal(apperr)
-
-				select {
-				case c.Send <- errJsn:
-				default:
-					return
-				}
-			} else {
-				log.Printf("[INTERNAL SERVER ERROR] (ReadPump) %v", err)
-			}
+		if !d.Dispatch(c, msgResp) {
 			continue
 		}
 	}

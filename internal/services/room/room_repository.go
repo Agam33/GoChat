@@ -11,6 +11,8 @@ import (
 )
 
 type RoomRepository interface {
+	LeaveRoom(ctx context.Context, roomId uint64, userId uint64) error
+	IsJoined(ctx context.Context, roomId uint64, userId uint64) error
 	JoinRoom(ctx context.Context, room *model.UserRoom) error
 	DeleteRoom(ctx context.Context, roomId uint64) error
 	GetRoomMessages(ctx context.Context, roomId uint64, pagination *types.Pagination) ([]model.Message, error)
@@ -28,9 +30,33 @@ func NewRoomRepository(db *gorm.DB) RoomRepository {
 	}
 }
 
+func (r *roomRepository) LeaveRoom(ctx context.Context, roomId uint64, userId uint64) error {
+	if err := r.db.WithContext(ctx).Delete(&model.UserRoom{UserID: userId, RoomID: roomId}).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *roomRepository) IsJoined(ctx context.Context, roomId uint64, userId uint64) error {
+	if err := r.db.WithContext(ctx).Where("room_id = ? AND user_id = ?", roomId, userId).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return gorm.ErrRecordNotFound
+		}
+
+		return err
+	}
+
+	return nil
+}
+
 func (r *roomRepository) JoinRoom(ctx context.Context, room *model.UserRoom) error {
-	err := r.db.WithContext(ctx).Where("room_id = ?", room.RoomID).Create(room).Error
+	err := r.db.WithContext(ctx).Create(room).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrCheckConstraintViolated) {
+			return gorm.ErrCheckConstraintViolated
+		}
+
 		return err
 	}
 
@@ -51,6 +77,7 @@ func (r *roomRepository) GetRoomMessages(ctx context.Context, roomId uint64, pag
 		Order("created_at DESC").
 		Limit(pagination.Limit).
 		Offset(utils.PageOffset(pagination.Page, pagination.Limit)).
+		Preload("ReplyMessage").
 		Preload("Sender").Find(&messages).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -71,7 +98,7 @@ func (r *roomRepository) CreateRoom(ctx context.Context, room *model.Room) error
 		userRoom := &model.UserRoom{
 			UserID: room.CreatorID,
 			RoomID: room.ID,
-			Role:   "owner",
+			Role:   "admin",
 		}
 
 		if err := r.db.WithContext(ctx).Create(userRoom).Error; err != nil {

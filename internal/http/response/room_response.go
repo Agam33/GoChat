@@ -21,9 +21,10 @@ type GetDetailRoomResponse struct {
 }
 
 type RoomMessageResponse struct {
-	ID          uint64          `json:"id"`
-	ContentType string          `json:"contentType"`
-	Sender      UserResponse    `json:"sender"`
-	Content     json.RawMessage `json:"content"`
-	CreatedAt   time.Time       `json:"createdAt"`
+	ID           uint64                  `json:"id"`
+	Sender       UserResponse            `json:"sender"`
+	Content      json.RawMessage         `json:"content"`
+	ReplyContent *GetMessageByIdResponse `json:"replyContent"`
+	CreatedAt    time.Time               `json:"createdAt"`
+	UpdatedAt    time.Time               `json:"updatedAt"`
 }

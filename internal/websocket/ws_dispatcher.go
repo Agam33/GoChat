@@ -5,6 +5,6 @@ import (
 )
 
 type Dispatcher interface {
-	Dispatch(c *Client, msg event.WSMessageEvent) error
+	Dispatch(c *Client, msg event.WSMessageEvent) bool
 	Disconnect(c *Client)
 }

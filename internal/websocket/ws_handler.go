@@ -3,6 +3,7 @@ package websocket
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"go-chat/internal/constant"
 	"go-chat/internal/http/response"
@@ -51,84 +52,118 @@ func (h *wsHandler) Disconnect(c *Client) {
 	h.hub.unregister <- c
 }
 
-func (h *wsHandler) Dispatch(c *Client, msg event.WSMessageEvent) error {
+func (h *wsHandler) Dispatch(c *Client, msg event.WSMessageEvent) bool {
 	switch msg.Action {
-	case "room.join":
+	case "room_join":
 		var roomJoin event.RoomEvent
 		if err := json.Unmarshal(msg.Data, &roomJoin); err != nil {
-			return response.NewBadRequestErr("can't parse request room join", err)
+			h.sendWsError(c, response.NewBadRequestErr("can't parse request room join", err))
+			return false
 		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+		defer cancel()
 
 		h.hub.subscribe <- &Subscriber{
 			C:     c,
 			Topic: BuildWSTopic("room", "chat", roomJoin.RoomId),
 		}
 
+		_, err := h.roomService.JoinRoom(ctx, uint64(roomJoin.RoomId), c.UserId)
+		if err != nil {
+			return true
+		}
+
 		content := event.TextContentData{
 			ContentType: "system",
 			Text:        fmt.Sprintf("%s joined.", c.displayName),
+			CreatedAt:   time.Now(),
 		}
 
-		if err := h.sendSystemChat(c, uint64(roomJoin.RoomId), content); err != nil {
-			return err
+		if err := h.sendSystemChat(ctx, c, uint64(roomJoin.RoomId), content); err != nil {
+			h.sendWsError(c, err)
+			return false
 		}
 
-	case "room.leave": // temporary leave
+	case "room_leave":
 		var roomLeave event.RoomEvent
 		if err := json.Unmarshal(msg.Data, &roomLeave); err != nil {
-			return response.NewBadRequestErr("can't parse request room join", err)
+			h.sendWsError(c, response.NewBadRequestErr("can't parse request room join", err))
+			return false
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+		defer cancel()
+
+		if err := h.roomService.LeaveRoom(ctx, uint64(roomLeave.RoomId), c.UserId); err != nil {
+			h.sendWsError(c, err)
+			return false
+		}
+
+		content := event.TextContentData{
+			ContentType: "system",
+			Text:        fmt.Sprintf("%s left.", c.displayName),
+			CreatedAt:   time.Now(),
+		}
+
+		if err := h.sendSystemChat(ctx, c, uint64(roomLeave.RoomId), content); err != nil {
+			h.sendWsError(c, err)
+			return false
 		}
 
 		h.hub.unsubscribe <- &Subscriber{
 			Topic: BuildWSTopic("room", "chat", roomLeave.RoomId),
 			C:     c,
 		}
-	case "room.send.text":
+	case "room_send_text":
 		var sendText event.SendTextEvent
 		if err := json.Unmarshal(msg.Data, &sendText); err != nil {
-			return response.NewBadRequestErr("can't parse request chat text", err)
+			h.sendWsError(c, response.NewBadRequestErr("can't parse request chat text", err))
+			return false
 		}
 
 		if err := h.roomSendText(c, sendText); err != nil {
-			return err
+			h.sendWsError(c, err)
+			return false
 		}
-	case "room.reply.text":
+	case "room_reply_text":
 		var replyMsg event.SendReplyEvent
 		if err := json.Unmarshal(msg.Data, &replyMsg); err != nil {
-			return response.NewBadRequestErr("can't parse request reply chat text", err)
+			h.sendWsError(c, response.NewBadRequestErr("can't parse request reply chat text", err))
+			return false
 		}
 
 		if err := h.sendReplyText(c, &replyMsg); err != nil {
-			return err
+			h.sendWsError(c, err)
+			return false
 		}
-	case "room.delete.message":
+	case "room_delete_message":
 		var delMsg event.DeleteMessageEvent
 		if err := json.Unmarshal(msg.Data, &delMsg); err != nil {
-			return response.NewBadRequestErr("can't parse request delete message", err)
+			h.sendWsError(c, response.NewBadRequestErr("can't parse request delete message", err))
+			return false
 		}
 
 		if err := h.deleteMessage(&delMsg); err != nil {
-			return err
+			h.sendWsError(c, err)
+			return false
 		}
 
 	default:
 	}
 
-	return nil
+	return true
 }
 
-func (h *wsHandler) sendSystemChat(c *Client, roomId uint64, content event.TextContentData) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-	defer cancel()
-
-	if err := h.chatService.SaveTextMessage(ctx, c.UserId, content); err != nil {
+func (h *wsHandler) sendSystemChat(ctx context.Context, c *Client, roomId uint64, content event.TextContentData) error {
+	if err := h.chatService.SaveTextMessage(ctx, c.UserId, roomId, content); err != nil {
 		return err
 	}
 
 	contentData, _ := json.Marshal(content)
 
 	evt := &event.WSMessageEvent{
-		Action: "room.system.text",
+		Action: "room_chat_system",
 		Data:   contentData,
 	}
 	evtData, _ := json.Marshal(evt)
@@ -161,7 +196,7 @@ func (h *wsHandler) deleteMessage(delMsg *event.DeleteMessageEvent) error {
 	}
 
 	evt := event.WSMessageEvent{
-		Action: "room.delete.message",
+		Action: "room_delete_message",
 		Data:   rawContent,
 	}
 	evtData, _ := json.Marshal(evt)
@@ -178,9 +213,19 @@ func (h *wsHandler) sendReplyText(c *Client, sendReply *event.SendReplyEvent) er
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
+	replyMsg, err := h.chatService.GetMessageById(ctx, sendReply.ReplyTo)
+	if err != nil {
+		return err
+	}
+
 	contentData := event.TextContentData{
-		ContentType: "text",
 		Text:        sendReply.Text,
+		ContentType: "text",
+		CreatedAt:   time.Now(),
+	}
+
+	if err := h.chatService.ReplyMessage(ctx, sendReply, contentData, replyMsg); err != nil {
+		return err
 	}
 
 	rawContent, err := json.Marshal(contentData)
@@ -188,23 +233,24 @@ func (h *wsHandler) sendReplyText(c *Client, sendReply *event.SendReplyEvent) er
 		return response.NewInternalServerErr(err.Error(), err)
 	}
 
-	if err := h.chatService.ReplyMessage(ctx, sendReply, contentData); err != nil {
-		return err
-	}
-
 	msgText := event.MessageData{
 		RoomId: sendReply.RoomId,
 		Sender: event.ClienData{
 			ID:     c.UserId,
 			Name:   c.displayName,
-			ImgUrl: &c.avatarURL,
+			ImgUrl: c.avatarURL,
 		},
-		Content: rawContent,
+		ReplyContent: &event.ReplyContentData{
+			ID:      replyMsg.ID,
+			Content: replyMsg.Content,
+		},
+		Content:   rawContent,
+		CreatedAt: contentData.CreatedAt,
 	}
 	textData, _ := json.Marshal(msgText)
 
 	evt := event.WSMessageEvent{
-		Action: "room.chat.reply",
+		Action: "room_chat_reply",
 		Data:   textData,
 	}
 	rawEvt, _ := json.Marshal(evt)
@@ -224,6 +270,7 @@ func (h *wsHandler) roomSendText(c *Client, sendText event.SendTextEvent) error 
 	contentData := event.TextContentData{
 		ContentType: "text",
 		Text:        sendText.Text,
+		CreatedAt:   time.Now(),
 	}
 
 	rawContent, err := json.Marshal(contentData)
@@ -231,7 +278,7 @@ func (h *wsHandler) roomSendText(c *Client, sendText event.SendTextEvent) error 
 		return response.NewInternalServerErr(err.Error(), err)
 	}
 
-	err = h.chatService.SaveTextMessage(ctx, c.UserId, contentData)
+	err = h.chatService.SaveTextMessage(ctx, c.UserId, uint64(sendText.RoomId), contentData)
 	if err != nil {
 		return err
 	}
@@ -241,14 +288,16 @@ func (h *wsHandler) roomSendText(c *Client, sendText event.SendTextEvent) error 
 		Sender: event.ClienData{
 			ID:     c.UserId,
 			Name:   c.displayName,
-			ImgUrl: &c.avatarURL,
+			ImgUrl: c.avatarURL,
 		},
-		Content: rawContent,
+		Content:   rawContent,
+		CreatedAt: contentData.CreatedAt,
+		UpdatedAt: contentData.CreatedAt,
 	}
 	textData, _ := json.Marshal(msgText)
 
 	evt := &event.WSMessageEvent{
-		Action: "room.chat.send",
+		Action: "room_chat_send",
 		Data:   textData,
 	}
 	evtData, _ := json.Marshal(evt)
@@ -261,6 +310,44 @@ func (h *wsHandler) roomSendText(c *Client, sendText event.SendTextEvent) error 
 	return nil
 }
 
+func (h *wsHandler) sendWsError(c *Client, err error) {
+	code := http.StatusInternalServerError
+	msg := "internal server error"
+
+	var apperr *response.AppErr
+	if errors.As(err, &apperr) {
+		code = apperr.Code
+
+		if code < 500 && code >= 400 {
+			msg = apperr.Message
+		}
+
+		if code >= 500 && apperr.Err != nil {
+			log.Printf("error wesocket: %v", err)
+		}
+	} else {
+		log.Printf("[INTERNAL SERVER ERROR] (ReadPump) %v", err)
+		return
+	}
+
+	payload, _ := json.Marshal(event.WsErrorEvent{
+		Type:    "error",
+		Code:    code,
+		Message: msg,
+	})
+
+	frame, _ := json.Marshal(event.WSMessageEvent{
+		Action: "error",
+		Data:   payload,
+	})
+
+	select {
+	case c.Send <- frame:
+	default:
+		return
+	}
+}
+
 func (h *wsHandler) ServeWS(c *gin.Context) {
 	// prevent wrong client
 	if !websocket.IsWebSocketUpgrade(c.Request) {
@@ -268,15 +355,15 @@ func (h *wsHandler) ServeWS(c *gin.Context) {
 		return
 	}
 
-	userId := c.GetUint64(constant.CtxUserIDKey)
+	userId := c.GetInt64(constant.CtxUserIDKey)
 
 	conn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		fmt.Printf("can't serve websocket: %v", err)
+		c.JSON(http.StatusBadRequest, response.NewBadRequestErr("can't serve to websocket", err))
 		return
 	}
 
-	usr, err := h.userService.GetById(c.Request.Context(), userId)
+	usr, err := h.userService.GetById(c.Request.Context(), uint64(userId))
 	if err != nil {
 		conn.WriteMessage(
 			websocket.CloseMessage,
@@ -291,7 +378,7 @@ func (h *wsHandler) ServeWS(c *gin.Context) {
 		Conn:        conn,
 		Send:        make(chan []byte, 512),
 		displayName: usr.Name,
-		avatarURL:   *usr.ImgUrl,
+		avatarURL:   usr.ImgUrl,
 	}
 
 	h.hub.register <- client

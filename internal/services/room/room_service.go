@@ -14,6 +14,8 @@ import (
 )
 
 type RoomService interface {
+	LeaveRoom(ctx context.Context, roomId uint64, userId uint64) error
+	IsJoined(ctx context.Context, roomId uint64, userId uint64) (response.BoolResponse, error)
 	JoinRoom(ctx context.Context, roomId uint64, userId uint64) (response.BoolResponse, error)
 	DeleteRoom(ctx context.Context, roomId uint64) (response.BoolResponse, error)
 	GetMessages(ctx context.Context, roomId int64, pagination *types.Pagination) ([]response.RoomMessageResponse, error)
@@ -31,8 +33,32 @@ func NewRoomService(roomRepo RoomRepository) RoomService {
 	}
 }
 
-func (r *roomService) JoinRoom(ctx context.Context, roomId uint64, userId uint64) (response.BoolResponse, error) {
+func (r *roomService) LeaveRoom(ctx context.Context, roomId uint64, userId uint64) error {
+	if err := r.roomRepo.LeaveRoom(ctx, roomId, userId); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return response.NewNotFoundErr("room not found", err)
+		}
+		return response.NewInternalServerErr(err.Error(), err)
+	}
 
+	return nil
+}
+
+func (r *roomService) IsJoined(ctx context.Context, roomdId uint64, userId uint64) (response.BoolResponse, error) {
+	if err := r.roomRepo.IsJoined(ctx, roomdId, userId); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return response.BoolResponse{Data: true}, response.NewBadRequestErr("room not found", err)
+		}
+
+		return response.BoolResponse{}, response.NewInternalServerErr(err.Error(), err)
+	}
+
+	return response.BoolResponse{
+		Data: true,
+	}, nil
+}
+
+func (r *roomService) JoinRoom(ctx context.Context, roomId uint64, userId uint64) (response.BoolResponse, error) {
 	roomModel := &model.UserRoom{
 		UserID: userId,
 		RoomID: roomId,
@@ -41,8 +67,13 @@ func (r *roomService) JoinRoom(ctx context.Context, roomId uint64, userId uint64
 
 	if err := r.roomRepo.JoinRoom(ctx, roomModel); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return response.BoolResponse{}, response.NewNotFoundErr("room not found", err)
+			return response.BoolResponse{Data: true}, response.NewNotFoundErr("room not found", err)
 		}
+
+		if errors.Is(err, gorm.ErrCheckConstraintViolated) {
+			return response.BoolResponse{Data: true}, response.NewBadRequestErr("user already join", err)
+		}
+
 		return response.BoolResponse{}, response.NewInternalServerErr(err.Error(), err)
 	}
 
@@ -54,7 +85,7 @@ func (r *roomService) JoinRoom(ctx context.Context, roomId uint64, userId uint64
 func (r *roomService) DeleteRoom(ctx context.Context, roomId uint64) (response.BoolResponse, error) {
 	if err := r.roomRepo.DeleteRoom(ctx, uint64(roomId)); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return response.BoolResponse{}, response.NewNotFoundErr("room not found", err)
+			return response.BoolResponse{Data: true}, response.NewNotFoundErr("room not found", err)
 		}
 		return response.BoolResponse{}, response.NewInternalServerErr(err.Error(), err)
 	}
@@ -85,12 +116,21 @@ func (r *roomService) GetMessages(ctx context.Context, roomId int64, pagination 
 			}
 		}
 
+		var replyMsg *response.GetMessageByIdResponse
+		if message.ReplyID != nil && message.ReplyMessage != nil {
+			replyMsg = &response.GetMessageByIdResponse{
+				ID:      message.ReplyMessage.ID,
+				Content: json.RawMessage(message.ReplyMessage.ReplyContent),
+			}
+		}
+
 		res = append(res, response.RoomMessageResponse{
-			ID:          message.ID,
-			ContentType: message.ContentType,
-			Sender:      sender,
-			Content:     json.RawMessage(message.Content),
-			CreatedAt:   message.CreatedAt,
+			ID:           message.ID,
+			Sender:       sender,
+			ReplyContent: replyMsg,
+			Content:      json.RawMessage(message.Content),
+			CreatedAt:    message.CreatedAt,
+			UpdatedAt:    message.UpdatedAt,
 		})
 	}
 
@@ -129,8 +169,8 @@ func (r *roomService) GetRoomById(ctx context.Context, roomId int64) (response.G
 		ImgUrl: room.ImgUrl,
 		Creator: response.UserResponse{
 			ID:     room.CreatorID,
-			Name:   room.Name,
-			ImgUrl: room.ImgUrl,
+			Name:   room.Creator.Username,
+			ImgUrl: room.Creator.ImgUrl,
 		},
 		CreatedAt: room.CreatedAt,
 	}, nil
