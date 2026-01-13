@@ -13,6 +13,7 @@ import (
 )
 
 type RoomHandler interface {
+	GetRoom(c *gin.Context)
 	JoinRoom(c *gin.Context)
 	CreateRoom(c *gin.Context)
 	DeleteRoom(c *gin.Context)
@@ -27,6 +28,31 @@ func NewRoomHandler(roomService room.RoomService) RoomHandler {
 	return &roomHandler{
 		roomService: roomService,
 	}
+}
+
+func (h *roomHandler) GetRoom(c *gin.Context) {
+	roomIdp := c.Param("id")
+	if roomIdp == "" {
+		c.Error(response.NewBadRequestErr("missing id param", nil))
+		return
+	}
+
+	roomId, err := strconv.ParseInt(roomIdp, 10, 0)
+	if err != nil {
+		c.Error(response.NewBadRequestErr("can't parse room id. Id should be a number", nil))
+		return
+	}
+
+	resp, err := h.roomService.GetRoomById(c.Request.Context(), roomId)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, response.SuccessReponse[response.GetDetailRoomResponse]{
+		Message: constant.StatusSuccess,
+		Data:    resp,
+	})
 }
 
 func (h *roomHandler) JoinRoom(c *gin.Context) {

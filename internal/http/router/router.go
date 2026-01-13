@@ -41,6 +41,7 @@ func NewRouter(
 		v1.POST("/room/create", roomHandler.CreateRoom)
 		v1.GET("/room/:id/messages", roomHandler.GetMessages)
 		v1.DELETE("/room/:id", roomHandler.DeleteRoom)
+		v1.GET("/room/:id", roomHandler.GetRoom)
 		v1.POST("/room/:id/join", roomHandler.JoinRoom)
 	}
 

@@ -24,8 +24,12 @@ func NewAuthReposeitory(db *gorm.DB) AuthRepository {
 }
 
 func (r *authRepository) SignUp(ctx context.Context, user *model.User) error {
-	if err := r.db.WithContext(ctx).Create(user); err != nil {
-		return gorm.ErrCheckConstraintViolated
+	if err := r.db.WithContext(ctx).Create(user).Error; err != nil {
+		if errors.Is(err, gorm.ErrCheckConstraintViolated) {
+			return gorm.ErrCheckConstraintViolated
+		}
+
+		return err
 	}
 	return nil
 }

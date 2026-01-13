@@ -4,12 +4,16 @@ import (
 	"context"
 	"go-chat/internal/model"
 
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
 type ChatRepository interface {
-	DeleteMessage(context.Context, uint64, uint64) error
-	SaveMessage(context.Context, *model.Message) error
+	WithTransaction(ctx context.Context, cb func(chatRepo ChatRepository) error) error
+	SaveReplyMessage(ctx context.Context, replyId uint64, contentType string, content []byte) error
+	GetMessageById(ctx context.Context, msgId uint64) (*model.Message, error)
+	DeleteMessage(ctx context.Context, userId uint64, msgId uint64) error
+	SaveMessage(ctx context.Context, message *model.Message) error
 }
 
 type chatRepository struct {
@@ -20,6 +24,43 @@ func NewChatRepository(db *gorm.DB) ChatRepository {
 	return &chatRepository{
 		db: db,
 	}
+}
+
+func (repo *chatRepository) WithTransaction(ctx context.Context, cb func(chatRepo ChatRepository) error) error {
+	if err := repo.db.Transaction(func(tx *gorm.DB) error {
+		rp := &chatRepository{db: tx}
+		if err := cb(rp); err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (repo *chatRepository) SaveReplyMessage(ctx context.Context, replyId uint64, contentType string, content []byte) error {
+	replyMsg := &model.ReplyMessage{
+		ID:           replyId,
+		ContentType:  contentType,
+		ReplyContent: datatypes.JSON(content),
+	}
+	if err := repo.db.WithContext(ctx).Create(replyMsg).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (repo *chatRepository) GetMessageById(ctx context.Context, msgId uint64) (*model.Message, error) {
+	var msg model.Message
+	if err := repo.db.WithContext(ctx).Where("id = ?", msgId).First(&msg).Error; err != nil {
+		return nil, err
+	}
+
+	return &msg, nil
 }
 
 func (repo *chatRepository) DeleteMessage(ctx context.Context, userId uint64, msgId uint64) error {

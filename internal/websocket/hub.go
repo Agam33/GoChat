@@ -13,7 +13,7 @@ type Subscriber struct {
 }
 
 type Hub struct {
-	Topics map[string]map[*Client]struct{}
+	Topics map[string]map[uint64]*Client
 
 	register   chan *Client
 	unregister chan *Client
@@ -26,7 +26,7 @@ type Hub struct {
 
 func NewHub() *Hub {
 	return &Hub{
-		Topics: make(map[string]map[*Client]struct{}),
+		Topics: make(map[string]map[uint64]*Client),
 
 		register:   make(chan *Client, 256),
 		unregister: make(chan *Client, 256),
@@ -42,11 +42,11 @@ func (h *Hub) Run() {
 	for {
 		select {
 		case client := <-h.register:
-			log.Printf("client regis: %v", client)
+			log.Printf("client regis: %d", client.UserId)
 
 		case client := <-h.unregister:
 			for topic, clients := range h.Topics {
-				delete(clients, client)
+				delete(clients, client.UserId)
 				if len(clients) == 0 {
 					delete(h.Topics, topic)
 				}
@@ -57,22 +57,24 @@ func (h *Hub) Run() {
 		case sub := <-h.subscribe:
 			clients, ok := h.Topics[sub.Topic]
 			if !ok {
-				clients = make(map[*Client]struct{})
+				clients = make(map[uint64]*Client)
 				h.Topics[sub.Topic] = clients
 			}
-			clients[sub.C] = struct{}{}
+			clients[sub.C.UserId] = sub.C
 
 		case sub := <-h.unsubscribe:
 			clients := h.Topics[sub.Topic]
-			delete(clients, sub.C)
+			delete(clients, sub.C.UserId)
 
 		case msg := <-h.broadcast:
 			clients := h.Topics[msg.Topic]
 			for c := range clients {
-				select {
-				case c.Send <- msg.Data:
-				default:
-					delete(clients, c)
+				if client, ok := clients[c]; ok {
+					select {
+					case client.Send <- msg.Data:
+					default:
+						delete(clients, c)
+					}
 				}
 			}
 		}

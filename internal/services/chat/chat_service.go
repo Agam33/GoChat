@@ -13,9 +13,10 @@ import (
 )
 
 type ChatService interface {
-	ReplyMessage(ctx context.Context, req *event.SendReplyEvent, contentData event.TextContentData) error
+	GetMessageById(ctx context.Context, msgId uint64) (response.GetMessageByIdResponse, error)
+	ReplyMessage(ctx context.Context, req *event.SendReplyEvent, contentData event.TextContentData, replyMsg response.GetMessageByIdResponse) error
 	DeleteMessage(ctx context.Context, req *event.DeleteMessageEvent) (response.BoolResponse, error)
-	SaveTextMessage(ctx context.Context, senderId uint64, req event.TextContentData) error
+	SaveTextMessage(ctx context.Context, senderId uint64, roomId uint64, req event.TextContentData) error
 }
 
 type chatService struct {
@@ -28,31 +29,64 @@ func NewChatService(chatRepo ChatRepository) ChatService {
 	}
 }
 
-func (c *chatService) ReplyMessage(ctx context.Context, req *event.SendReplyEvent, contentData event.TextContentData) error {
-	jsonb, _ := json.Marshal(contentData)
+func (c *chatService) GetMessageById(ctx context.Context, msgId uint64) (response.GetMessageByIdResponse, error) {
+	msg, err := c.chatRepo.GetMessageById(ctx, msgId)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return response.GetMessageByIdResponse{}, response.NewNotFoundErr("msg not found", err)
+		}
 
-	msgModel := &model.Message{
-		ID:       uint64(time.Now().Unix()),
-		SenderID: req.SenderId,
-		ReplyID:  &req.ReplyTo,
-		Content:  jsonb,
+		return response.GetMessageByIdResponse{}, response.NewInternalServerErr(err.Error(), err)
 	}
 
-	if err := c.chatRepo.SaveMessage(ctx, msgModel); err != nil {
-		return response.NewInternalServerErr(err.Error(), err)
+	return response.GetMessageByIdResponse{
+		ID:      msg.ID,
+		Content: json.RawMessage(msg.Content),
+	}, nil
+}
+
+func (c *chatService) ReplyMessage(ctx context.Context, req *event.SendReplyEvent, contentData event.TextContentData, resMessage response.GetMessageByIdResponse) error {
+	if err := c.chatRepo.WithTransaction(ctx, func(chatRepo ChatRepository) error {
+		err := chatRepo.SaveReplyMessage(ctx, resMessage.ID, contentData.ContentType, resMessage.Content)
+		if err != nil {
+			return response.NewInternalServerErr(err.Error(), err)
+		}
+
+		jsonb, _ := json.Marshal(contentData)
+		msgModel := &model.Message{
+			ID:          uint64(time.Now().Unix()),
+			RoomID:      req.RoomId,
+			SenderID:    req.SenderId,
+			ReplyID:     &resMessage.ID,
+			ContentType: contentData.ContentType,
+			Content:     jsonb,
+			CreatedAt:   contentData.CreatedAt,
+			UpdatedAt:   contentData.CreatedAt,
+		}
+
+		if err := chatRepo.SaveMessage(ctx, msgModel); err != nil {
+			return response.NewInternalServerErr(err.Error(), err)
+		}
+
+		return nil
+	}); err != nil {
+		return err
 	}
 
 	return nil
 }
 
-func (c *chatService) SaveTextMessage(ctx context.Context, senderId uint64, req event.TextContentData) error {
+func (c *chatService) SaveTextMessage(ctx context.Context, senderId uint64, roomId uint64, req event.TextContentData) error {
 	jsonb, _ := json.Marshal(req)
 
 	msgModel := &model.Message{
 		ID:          uint64(time.Now().Unix()),
+		RoomID:      roomId,
 		SenderID:    senderId,
 		ContentType: req.ContentType,
 		Content:     jsonb,
+		CreatedAt:   req.CreatedAt,
+		UpdatedAt:   req.CreatedAt,
 	}
 
 	if err := c.chatRepo.SaveMessage(ctx, msgModel); err != nil {

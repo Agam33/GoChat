@@ -68,6 +68,8 @@ func (as *authService) SignUp(ctx context.Context, req *request.SignUpRequest) (
 	}); err != nil {
 		if errors.Is(err, gorm.ErrCheckConstraintViolated) {
 			return response.SignInResponse{}, response.NewBadRequestErr("user already exists", err)
+		} else if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return response.SignInResponse{}, response.NewBadRequestErr("user already exists", err)
 		} else {
 			return response.SignInResponse{}, response.NewInternalServerErr("error signup", err)
 		}
