@@ -3,6 +3,7 @@ package chat
 import (
 	"context"
 	"go-chat/internal/model"
+	"time"
 
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
@@ -10,7 +11,7 @@ import (
 
 type ChatRepository interface {
 	WithTransaction(ctx context.Context, cb func(chatRepo ChatRepository) error) error
-	SaveReplyMessage(ctx context.Context, replyId uint64, contentType string, content []byte) error
+	SaveReplyMessage(ctx context.Context, contentType string, content []byte) (uint64, error)
 	GetMessageById(ctx context.Context, msgId uint64) (*model.Message, error)
 	DeleteMessage(ctx context.Context, userId uint64, msgId uint64) error
 	SaveMessage(ctx context.Context, message *model.Message) error
@@ -41,17 +42,18 @@ func (repo *chatRepository) WithTransaction(ctx context.Context, cb func(chatRep
 	return nil
 }
 
-func (repo *chatRepository) SaveReplyMessage(ctx context.Context, replyId uint64, contentType string, content []byte) error {
+func (repo *chatRepository) SaveReplyMessage(ctx context.Context, contentType string, content []byte) (uint64, error) {
+	id := uint64(time.Now().UnixMilli())
 	replyMsg := &model.ReplyMessage{
-		ID:           replyId,
+		ID:           id,
 		ContentType:  contentType,
 		ReplyContent: datatypes.JSON(content),
 	}
 	if err := repo.db.WithContext(ctx).Create(replyMsg).Error; err != nil {
-		return err
+		return 0, err
 	}
 
-	return nil
+	return id, nil
 }
 
 func (repo *chatRepository) GetMessageById(ctx context.Context, msgId uint64) (*model.Message, error) {

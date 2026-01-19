@@ -3,6 +3,7 @@ services:
     container_name: gochat_api
     build: .
     depends_on:
+      - rabbitmq
       - db
     ports:
       - "${APP_PORT}:${APP_PORT}"
@@ -24,6 +25,25 @@ services:
       - DB_PORT=${DB_PORT}
       - DB_SSLMODE=${DB_SSLMODE}
 
+      # rabbitmq
+      - MQ_USER=${MQ_USER}
+      - MQ_PASSWORD=${MQ_PASSWORD}
+      - MQ_PORT=${MQ_PORT}
+      - MQ_VHOST=${MQ_VHOST}
+
+  rabbitmq: 
+    container_name: gochat_mq
+    image: rabbitmq:3-management
+    ports:
+      - ${MQ_PORT}:${MQ_PORT} # for AMQP
+      - 15672:15672 # UI management
+    environment:
+      RABBITMQ_DEFAULT_USER: ${MQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${MQ_PASSWORD}
+      RABBITMQ_DEFAULT_VHOST: ${MQ_VHOST}
+    volumes:
+      - mq_data:/var/lib/rabbitmq
+
   db:
     container_name: gochat_db
     image: postgres:15
@@ -39,3 +59,4 @@ services:
 
 volumes:
   db_data:
+  mq_data:
