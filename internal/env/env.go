@@ -28,6 +28,14 @@ type Env struct {
 		Password string `mapstructure:"DB_PASSWORD"`
 		SslMode  string `mapstructure:"DB_SSLMODE"`
 	} `mapstructure:",squash"`
+
+	MQ struct {
+		User     string `mapstructure:"MQ_USER"`
+		Password string `mapstructure:"MQ_PASSWORD"`
+		Port     int    `mapstructure:"MQ_PORT"`
+		Host     string `mapstructure:"MQ_HOST"`
+		Vhost    string `mapstructure:"MQ_VHOST"`
+	} `mapstructure:",squash"`
 }
 
 func NewEnv() (*Env, error) {
@@ -69,6 +77,7 @@ func getKeyBind() []string {
 		"APP_PORT",
 		"JWT_ACCESS_SECRET", "JWT_ACCESS_EXP", "JWT_REFRESH_SECRET", "JWT_REFRESH_EXP",
 		"DB_NAME", "DB_USER", "DB_PORT", "DB_HOST", "DB_SSLMODE", "DB_PASSWORD",
+		"MQ_USER", "MQ_PASSWORD", "MQ_PORT", "MQ_VHOST",
 	}
 }
 
@@ -95,6 +104,15 @@ func (e *Env) validate() error {
 		return errors.New("DB_PORT is required")
 	} else if e.Database.SslMode == "" {
 		return errors.New("DB_SSLMODE is required (disable or enable)")
+	} else if e.MQ.User == "" {
+		return errors.New("MQ_USER is required")
+	} else if e.MQ.Password == "" {
+		return errors.New("MQ_PASSWORD is required")
+	} else if e.MQ.Vhost == "" {
+		return errors.New("MQ_VHOST is required")
+	} else if e.MQ.Port == 0 {
+		return errors.New("MQ_PORT is required")
+	} else {
+		return nil
 	}
-	return nil
 }

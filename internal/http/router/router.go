@@ -4,6 +4,7 @@ import (
 	"go-chat/internal/http/handler"
 	"go-chat/internal/http/middleware"
 	"go-chat/internal/jwt"
+	"go-chat/internal/services/user"
 	"go-chat/internal/websocket"
 
 	"github.com/gin-gonic/gin"
@@ -13,6 +14,7 @@ func NewRouter(
 	router *gin.Engine,
 	wsHandler websocket.WsHandler,
 	jwtService jwt.JwtService,
+	userService user.UserService,
 	authHandler handler.AuthHandler,
 	userHandler handler.UserHandler,
 	roomHandler handler.RoomHandler,
@@ -20,7 +22,7 @@ func NewRouter(
 	api := router.Group("/api")
 
 	// websocket
-	api.GET("/ws", middleware.AccessTokenMiddleware(jwtService), wsHandler.ServeWS)
+	api.GET("/ws", middleware.AccessTokenMiddleware(jwtService), middleware.SetUserMiddleware(userService), wsHandler.ServeWS)
 
 	{
 		// no authorization

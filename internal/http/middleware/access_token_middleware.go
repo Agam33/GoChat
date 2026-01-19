@@ -14,19 +14,20 @@ func AccessTokenMiddleware(jwtService jwt.JwtService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		bearer := c.GetHeader(constant.Authorization)
 		if bearer == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, response.NewUnauthorized())
+			c.AbortWithError(http.StatusUnauthorized, response.NewUnauthorized())
 			return
 		}
 
 		s := strings.Split(bearer, " ")
 		if len(s) < 2 || strings.ToLower(s[0]) != "bearer" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, response.NewUnauthorized())
+			c.AbortWithError(http.StatusUnauthorized, response.NewUnauthorized())
 			return
 		}
 
 		usr, err := jwtService.ValidateAccessToken(s[1])
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, err)
+			c.Error(err)
+			c.Abort()
 			return
 		}
 

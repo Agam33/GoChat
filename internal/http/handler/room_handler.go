@@ -62,9 +62,9 @@ func (h *roomHandler) JoinRoom(c *gin.Context) {
 		return
 	}
 
-	userId := c.GetInt64(constant.CtxUserIDKey)
+	userId := c.GetUint64(constant.CtxUserIDKey)
 
-	resp, err := h.roomService.JoinRoom(c.Request.Context(), req.RoomId, uint64(userId))
+	resp, err := h.roomService.JoinRoom(c.Request.Context(), req.RoomId, userId)
 	if err != nil {
 		c.Error(err)
 		return
@@ -83,9 +83,9 @@ func (h *roomHandler) CreateRoom(c *gin.Context) {
 		return
 	}
 
-	userId := c.GetInt64(constant.CtxUserIDKey)
+	userId := c.GetUint64(constant.CtxUserIDKey)
 
-	resp, err := h.roomService.CreateRoom(c.Request.Context(), uint64(userId), &req)
+	resp, err := h.roomService.CreateRoom(c.Request.Context(), userId, &req)
 	if err != nil {
 		c.Error(err)
 		return

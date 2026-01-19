@@ -7,9 +7,10 @@ import (
 	"fmt"
 	"go-chat/internal/constant"
 	"go-chat/internal/http/response"
+	"go-chat/internal/rabbitmq"
 	"go-chat/internal/services/chat"
+	chatCmsr "go-chat/internal/services/chat/consumer"
 	"go-chat/internal/services/room"
-	"go-chat/internal/services/user"
 	"go-chat/internal/websocket/event"
 	"log"
 	"net/http"
@@ -26,12 +27,12 @@ type WsHandler interface {
 type wsHandler struct {
 	hub         *Hub
 	upgrader    websocket.Upgrader
-	userService user.UserService
+	publisher   rabbitmq.Publisher
 	roomService room.RoomService
 	chatService chat.ChatService
 }
 
-func NewWSHandler(hub *Hub, userService user.UserService, roomService room.RoomService, chatService chat.ChatService) WsHandler {
+func NewWSHandler(hub *Hub, publisher rabbitmq.Publisher, roomService room.RoomService, chatService chat.ChatService) WsHandler {
 	return &wsHandler{
 		hub: hub,
 		upgrader: websocket.Upgrader{
@@ -41,7 +42,7 @@ func NewWSHandler(hub *Hub, userService user.UserService, roomService room.RoomS
 				return true
 			},
 		},
-		userService: userService,
+		publisher:   publisher,
 		roomService: roomService,
 		chatService: chatService,
 	}
@@ -61,7 +62,7 @@ func (h *wsHandler) Dispatch(c *Client, msg event.WSMessageEvent) bool {
 			return false
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		defer cancel()
 
 		h.hub.subscribe <- &Subscriber{
@@ -156,9 +157,12 @@ func (h *wsHandler) Dispatch(c *Client, msg event.WSMessageEvent) bool {
 }
 
 func (h *wsHandler) sendSystemChat(ctx context.Context, c *Client, roomId uint64, content event.TextContentData) error {
-	if err := h.chatService.SaveTextMessage(ctx, c.UserId, roomId, content); err != nil {
-		return err
-	}
+	dt, _ := json.Marshal(chatCmsr.SaveTextEvent{
+		UserID:  c.UserId,
+		RoomID:  roomId,
+		Content: content,
+	})
+	h.publisher.Publish(ctx, constant.MQExchangeChat, constant.MQKindTopic, constant.MQRoutingChatSave, dt)
 
 	contentData, _ := json.Marshal(content)
 
@@ -180,9 +184,8 @@ func (h *wsHandler) deleteMessage(delMsg *event.DeleteMessageEvent) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	_, err := h.chatService.DeleteMessage(ctx, delMsg)
-	if err != nil {
-		return err
+	if _, err := h.chatService.DeleteMessage(ctx, delMsg); err != nil {
+		return response.NewNotFoundErr("message not found", err)
 	}
 
 	msgText := event.DeleteMessageData{
@@ -210,7 +213,7 @@ func (h *wsHandler) deleteMessage(delMsg *event.DeleteMessageEvent) error {
 }
 
 func (h *wsHandler) sendReplyText(c *Client, sendReply *event.SendReplyEvent) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	replyMsg, err := h.chatService.GetMessageById(ctx, sendReply.ReplyTo)
@@ -224,9 +227,12 @@ func (h *wsHandler) sendReplyText(c *Client, sendReply *event.SendReplyEvent) er
 		CreatedAt:   time.Now(),
 	}
 
-	if err := h.chatService.ReplyMessage(ctx, sendReply, contentData, replyMsg); err != nil {
-		return err
-	}
+	dt, _ := json.Marshal(chatCmsr.SendReplyTextEvent{
+		SendReply: *sendReply,
+		Content:   contentData,
+		ReplyMsg:  replyMsg,
+	})
+	h.publisher.Publish(ctx, constant.MQExchangeChat, constant.MQKindTopic, constant.MQRoutingChatReply, dt)
 
 	rawContent, err := json.Marshal(contentData)
 	if err != nil {
@@ -278,10 +284,12 @@ func (h *wsHandler) roomSendText(c *Client, sendText event.SendTextEvent) error 
 		return response.NewInternalServerErr(err.Error(), err)
 	}
 
-	err = h.chatService.SaveTextMessage(ctx, c.UserId, uint64(sendText.RoomId), contentData)
-	if err != nil {
-		return err
-	}
+	dt, _ := json.Marshal(chatCmsr.SaveTextEvent{
+		UserID:  c.UserId,
+		RoomID:  uint64(sendText.RoomId),
+		Content: contentData,
+	})
+	h.publisher.Publish(ctx, constant.MQExchangeChat, constant.MQKindTopic, constant.MQRoutingChatSave, dt)
 
 	msgText := &event.MessageData{
 		RoomId: uint64(sendText.RoomId),
@@ -351,25 +359,25 @@ func (h *wsHandler) sendWsError(c *Client, err error) {
 func (h *wsHandler) ServeWS(c *gin.Context) {
 	// prevent wrong client
 	if !websocket.IsWebSocketUpgrade(c.Request) {
-		c.JSON(http.StatusBadRequest, response.NewBadRequestErr("can't upgrade to websocket", nil))
+		c.AbortWithError(http.StatusBadRequest, response.NewBadRequestErr("can't upgrade to websocket", nil))
 		return
 	}
 
-	userId := c.GetInt64(constant.CtxUserIDKey)
+	ctxUser, exists := c.Get(constant.CtxUser)
+	if !exists {
+		c.AbortWithError(http.StatusUnauthorized, response.NewUnauthorized())
+		return
+	}
+
+	usr, ok := ctxUser.(response.UserResponse)
+	if !ok {
+		c.AbortWithError(http.StatusInternalServerError, response.NewInternalServerErr("serve-ws: invalid user type", nil))
+		return
+	}
 
 	conn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, response.NewBadRequestErr("can't serve to websocket", err))
-		return
-	}
-
-	usr, err := h.userService.GetById(c.Request.Context(), uint64(userId))
-	if err != nil {
-		conn.WriteMessage(
-			websocket.CloseMessage,
-			websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "unauthorized"),
-		)
-		conn.Close()
+		c.AbortWithError(http.StatusBadRequest, response.NewBadRequestErr("can't serve to websocket", err))
 		return
 	}
 

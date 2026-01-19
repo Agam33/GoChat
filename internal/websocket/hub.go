@@ -66,6 +66,10 @@ func (h *Hub) Run() {
 			clients := h.Topics[sub.Topic]
 			delete(clients, sub.C.UserId)
 
+			if len(clients) == 0 {
+				delete(h.Topics, sub.Topic)
+			}
+
 		case msg := <-h.broadcast:
 			clients := h.Topics[msg.Topic]
 			for c := range clients {
@@ -73,6 +77,7 @@ func (h *Hub) Run() {
 					select {
 					case client.Send <- msg.Data:
 					default:
+						close(client.Send)
 						delete(clients, c)
 					}
 				}

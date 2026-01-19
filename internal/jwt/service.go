@@ -58,7 +58,7 @@ func (s *jwtService) ValidateRefreshToken(token string) (*Jwtuser, error) {
 	}
 
 	return &Jwtuser{
-		UserId: int64(uidFloat),
+		UserId: uint64(uidFloat),
 		Claims: &claims,
 	}, nil
 }
@@ -79,7 +79,7 @@ func (s *jwtService) ValidateAccessToken(token string) (*Jwtuser, error) {
 	}
 
 	return &Jwtuser{
-		UserId: int64(uidFloat),
+		UserId: uint64(uidFloat),
 		Claims: &claims,
 	}, nil
 }

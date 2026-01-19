@@ -47,17 +47,17 @@ func (c *chatService) GetMessageById(ctx context.Context, msgId uint64) (respons
 
 func (c *chatService) ReplyMessage(ctx context.Context, req *event.SendReplyEvent, contentData event.TextContentData, resMessage response.GetMessageByIdResponse) error {
 	if err := c.chatRepo.WithTransaction(ctx, func(chatRepo ChatRepository) error {
-		err := chatRepo.SaveReplyMessage(ctx, resMessage.ID, contentData.ContentType, resMessage.Content)
+		replyId, err := chatRepo.SaveReplyMessage(ctx, contentData.ContentType, resMessage.Content)
 		if err != nil {
 			return response.NewInternalServerErr(err.Error(), err)
 		}
 
 		jsonb, _ := json.Marshal(contentData)
 		msgModel := &model.Message{
-			ID:          uint64(time.Now().Unix()),
+			ID:          uint64(time.Now().UnixMilli()),
 			RoomID:      req.RoomId,
 			SenderID:    req.SenderId,
-			ReplyID:     &resMessage.ID,
+			ReplyID:     &replyId,
 			ContentType: contentData.ContentType,
 			Content:     jsonb,
 			CreatedAt:   contentData.CreatedAt,
