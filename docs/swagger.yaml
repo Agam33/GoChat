@@ -1,0 +1,327 @@
+basePath: /api/v1
+definitions:
+  request.CreateRoomRequest:
+    properties:
+      name:
+        type: string
+    type: object
+  request.SignInRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  request.SignUpRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  response.AppErr:
+    properties:
+      code:
+        description: HTTP status code
+        type: integer
+      err:
+        description: Original err
+      message:
+        description: Client message
+        type: string
+    type: object
+  response.BoolResponse:
+    properties:
+      data:
+        type: boolean
+    type: object
+  response.GetDetailRoomResponse:
+    properties:
+      createdAt:
+        type: string
+      creator:
+        $ref: '#/definitions/response.UserResponse'
+      id:
+        type: integer
+      imgUrl:
+        type: string
+      name:
+        type: string
+    type: object
+  response.GetMessageByIdResponse:
+    properties:
+      content:
+        type: object
+      id:
+        type: integer
+    type: object
+  response.GetRoomResponse:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: integer
+      imgUrl:
+        type: string
+      name:
+        type: string
+    type: object
+  response.GetRoomsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.GetRoomResponse'
+        type: array
+      message:
+        type: string
+      meta:
+        $ref: '#/definitions/types.Meta'
+      success:
+        type: boolean
+    type: object
+  response.RoomMessageResponse:
+    properties:
+      content:
+        type: object
+      createdAt:
+        type: string
+      id:
+        type: integer
+      replyContent:
+        $ref: '#/definitions/response.GetMessageByIdResponse'
+      sender:
+        $ref: '#/definitions/response.UserResponse'
+      updatedAt:
+        type: string
+    type: object
+  response.SignInResponse:
+    properties:
+      accessToken:
+        type: string
+      refreshToken:
+        type: string
+    type: object
+  response.UserResponse:
+    properties:
+      id:
+        type: integer
+      imgUrl:
+        type: string
+      name:
+        type: string
+    type: object
+  types.Meta:
+    additionalProperties: {}
+    type: object
+host: localhost:8000
+info:
+  contact:
+    email: riswan.dev@gmail.com
+    name: agam
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  title: GoChat API
+  version: "1.0"
+paths:
+  /auth/logout:
+    post:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.BoolResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.AppErr'
+      security:
+      - BearerAuth: []
+      summary: Logout
+      tags:
+      - Auth
+  /auth/refresh-token:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.SignInResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.AppErr'
+      summary: Refresh Token
+      tags:
+      - Auth
+  /auth/signin:
+    post:
+      parameters:
+      - description: SignIn Request Payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.SignInRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.SignInResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.AppErr'
+      summary: SignIn
+      tags:
+      - Auth
+  /auth/signup:
+    post:
+      parameters:
+      - description: SignUp Request Payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.SignUpRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.SignInResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.AppErr'
+      summary: SignUp
+      tags:
+      - Auth
+  /room/{id}:
+    get:
+      parameters:
+      - description: Room ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.GetDetailRoomResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.AppErr'
+      security:
+      - BearerAuth: []
+      summary: Get Room
+      tags:
+      - Room
+    post:
+      parameters:
+      - description: Room ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.BoolResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.AppErr'
+      security:
+      - BearerAuth: []
+      summary: Delete Room
+      tags:
+      - Room
+  /room/{id}/messages:
+    get:
+      parameters:
+      - description: Room ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/response.RoomMessageResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.AppErr'
+      security:
+      - BearerAuth: []
+      summary: Get Room Messages
+      tags:
+      - Room
+  /room/create:
+    post:
+      parameters:
+      - description: Create Room Request Payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.CreateRoomRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.GetRoomResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.AppErr'
+      security:
+      - BearerAuth: []
+      summary: Create Room
+      tags:
+      - Room
+  /user/profile:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.AppErr'
+      security:
+      - BearerAuth: []
+      summary: Get Profiles
+      tags:
+      - User
+  /user/rooms:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.GetRoomsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.AppErr'
+      security:
+      - BearerAuth: []
+      summary: Get User Rooms
+      tags:
+      - User
+securityDefinitions:
+  BearerAuth:
+    description: 'Enter your JWT in the format: Bearer <token>'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

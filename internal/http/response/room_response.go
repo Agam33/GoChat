@@ -2,6 +2,7 @@ package response
 
 import (
 	"encoding/json"
+	"go-chat/internal/utils/types"
 	"time"
 )
 
@@ -23,8 +24,16 @@ type GetDetailRoomResponse struct {
 type RoomMessageResponse struct {
 	ID           uint64                  `json:"id"`
 	Sender       UserResponse            `json:"sender"`
-	Content      json.RawMessage         `json:"content"`
+	Content      json.RawMessage         `json:"content" swaggertype:"object"`
 	ReplyContent *GetMessageByIdResponse `json:"replyContent"`
 	CreatedAt    time.Time               `json:"createdAt"`
 	UpdatedAt    time.Time               `json:"updatedAt"`
+}
+
+// for swagger doc
+type GetRoomsResponse struct {
+	Success bool              `json:"success"`
+	Message string            `json:"message"`
+	Meta    types.Meta        `json:"meta"`
+	Data    []GetRoomResponse `json:"data"`
 }

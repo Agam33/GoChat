@@ -25,6 +25,12 @@ func NewUserHandler(userService user.UserService) UserHandler {
 	}
 }
 
+// @Summary Get User Rooms
+// @Security BearerAuth
+// @Tags	User
+// @Success	200 {object}	response.GetRoomsResponse
+// @Failure 400 {object}	response.AppErr
+// @Router	/user/rooms [get]
 func (h *userHandler) GetUserRooms(c *gin.Context) {
 	userId := c.GetUint64(constant.CtxUserIDKey)
 
@@ -47,6 +53,12 @@ func (h *userHandler) GetUserRooms(c *gin.Context) {
 	})
 }
 
+// @Summary Get Profiles
+// @Security BearerAuth
+// @Tags	User
+// @Success	200 {object}	response.UserResponse
+// @Failure 400 {object}	response.AppErr
+// @Router	/user/profile [get]
 func (h *userHandler) GetProfile(c *gin.Context) {
 	userId := c.GetUint64(constant.CtxUserIDKey)
 

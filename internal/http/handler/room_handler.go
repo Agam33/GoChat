@@ -30,6 +30,13 @@ func NewRoomHandler(roomService room.RoomService) RoomHandler {
 	}
 }
 
+// @Summary Get Room
+// @Security BearerAuth
+// @Tags	Room
+// @Param 	id path	int	true	"Room ID"
+// @Success	200 {object}	response.GetDetailRoomResponse
+// @Failure 400 {object}	response.AppErr
+// @Router	/room/{id}	[get]
 func (h *roomHandler) GetRoom(c *gin.Context) {
 	roomIdp := c.Param("id")
 	if roomIdp == "" {
@@ -76,6 +83,13 @@ func (h *roomHandler) JoinRoom(c *gin.Context) {
 	})
 }
 
+// @Summary Create Room
+// @Security BearerAuth
+// @Tags	Room
+// @Param	request	body request.CreateRoomRequest true "Create Room Request Payload"
+// @Success	200 {object}	response.GetRoomResponse
+// @Failure 400 {object}	response.AppErr
+// @Router	/room/create	[post]
 func (h *roomHandler) CreateRoom(c *gin.Context) {
 	var req request.CreateRoomRequest
 	if err := c.ShouldBind(&req); err != nil {
@@ -91,12 +105,19 @@ func (h *roomHandler) CreateRoom(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.SuccessReponse[response.BoolResponse]{
+	c.JSON(http.StatusOK, response.SuccessReponse[response.GetRoomResponse]{
 		Message: constant.StatusSuccess,
 		Data:    resp,
 	})
 }
 
+// @Summary Delete Room
+// @Security BearerAuth
+// @Tags	Room
+// @Param	id path int true "Room ID"
+// @Success	200 {object}	response.BoolResponse
+// @Failure 400 {object}	response.AppErr
+// @Router	/room/{id} [post]
 func (h *roomHandler) DeleteRoom(c *gin.Context) {
 	roomIdq := c.Param("id")
 	if roomIdq == "" {
@@ -122,6 +143,13 @@ func (h *roomHandler) DeleteRoom(c *gin.Context) {
 	})
 }
 
+// @Summary Get Room Messages
+// @Security BearerAuth
+// @Tags	Room
+// @Param	id path int true "Room ID"
+// @Success	200 {array}	response.RoomMessageResponse
+// @Failure 400 {object}	response.AppErr
+// @Router	/room/{id}/messages [get]
 func (h *roomHandler) GetMessages(c *gin.Context) {
 	roomIdq := c.Param("id")
 	if roomIdq == "" {
