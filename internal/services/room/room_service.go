@@ -19,7 +19,7 @@ type RoomService interface {
 	JoinRoom(ctx context.Context, roomId uint64, userId uint64) (response.BoolResponse, error)
 	DeleteRoom(ctx context.Context, roomId uint64) (response.BoolResponse, error)
 	GetMessages(ctx context.Context, roomId int64, pagination *types.Pagination) ([]response.RoomMessageResponse, error)
-	CreateRoom(ctx context.Context, userId uint64, req *request.CreateRoomRequest) (response.BoolResponse, error)
+	CreateRoom(ctx context.Context, userId uint64, req *request.CreateRoomRequest) (response.GetRoomResponse, error)
 	GetRoomById(ctx context.Context, roomId int64) (response.GetDetailRoomResponse, error)
 }
 
@@ -137,24 +137,28 @@ func (r *roomService) GetMessages(ctx context.Context, roomId int64, pagination 
 	return res, nil
 }
 
-func (r *roomService) CreateRoom(ctx context.Context, userId uint64, req *request.CreateRoomRequest) (response.BoolResponse, error) {
+func (r *roomService) CreateRoom(ctx context.Context, userId uint64, req *request.CreateRoomRequest) (response.GetRoomResponse, error) {
 	if req == nil {
-		return response.BoolResponse{}, response.NewBadRequestErr("invalid create room request", nil)
+		return response.GetRoomResponse{}, response.NewBadRequestErr("invalid create room request", nil)
 	}
 
 	roomId := time.Now().UnixMicro()
-	if err := r.roomRepo.CreateRoom(ctx, &model.Room{
+	room := &model.Room{
 		ID:        uint64(roomId),
 		CreatorID: uint64(userId),
 		Name:      req.Name,
 		ImgUrl:    nil,
-	}); err != nil {
-		return response.BoolResponse{}, err
+		CreatedAt: time.Now(),
+	}
+	if err := r.roomRepo.CreateRoom(ctx, room); err != nil {
+		return response.GetRoomResponse{}, err
 	}
 
-	return response.BoolResponse{
-		Data: true,
-	}, nil
+	return response.GetRoomResponse{
+		ID:        uint64(roomId),
+		Name:      room.Name,
+		ImgUrl:    room.ImgUrl,
+		CreatedAt: room.CreatedAt}, nil
 }
 
 func (r *roomService) GetRoomById(ctx context.Context, roomId int64) (response.GetDetailRoomResponse, error) {

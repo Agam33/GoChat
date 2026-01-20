@@ -3,8 +3,10 @@ services:
     container_name: gochat_api
     build: .
     depends_on:
-      - rabbitmq
-      - db
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     ports:
       - "${APP_PORT}:${APP_PORT}"
     restart: no
@@ -28,12 +30,18 @@ services:
       # rabbitmq
       - MQ_USER=${MQ_USER}
       - MQ_PASSWORD=${MQ_PASSWORD}
+      - MQ_HOST=${MQ_HOST}
       - MQ_PORT=${MQ_PORT}
       - MQ_VHOST=${MQ_VHOST}
 
   rabbitmq: 
-    container_name: gochat_mq
     image: rabbitmq:3-management
+    container_name: gochat_mq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     ports:
       - ${MQ_PORT}:${MQ_PORT} # for AMQP
       - 15672:15672 # UI management
@@ -45,8 +53,13 @@ services:
       - mq_data:/var/lib/rabbitmq
 
   db:
-    container_name: gochat_db
     image: postgres:15
+    container_name: gochat_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     ports:
       - "${DB_PORT}:${DB_PORT}"
     environment:

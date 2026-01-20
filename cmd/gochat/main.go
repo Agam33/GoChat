@@ -25,9 +25,30 @@ import (
 	"syscall"
 	"time"
 
+	_ "go-chat/docs"
+
 	"github.com/gin-gonic/gin"
+
+	swaggerFiles "github.com/swaggo/files"     // swagger embed files
+	ginSwagger "github.com/swaggo/gin-swagger" // gin-swagger middleware
 )
 
+// @title GoChat API
+// @version	1.0
+
+// @contact.name agam
+// @contact.email riswan.dev@gmail.com
+
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host localhost:8000
+// @BasePath /api/v1
+
+// @securityDefinitions.apiKey BearerAuth
+// @in header
+// @name Authorization
+// @description Enter your JWT in the format: Bearer <token>
 func main() {
 	env, err := env.NewEnv()
 	if err != nil {
@@ -62,6 +83,8 @@ func main() {
 		gin.Logger(),
 		middleware.ErrorHandlingMiddleware(),
 	)
+
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// repos
 	authRepo := auth.NewAuthReposeitory(psqlDB)

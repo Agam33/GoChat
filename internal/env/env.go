@@ -77,7 +77,7 @@ func getKeyBind() []string {
 		"APP_PORT",
 		"JWT_ACCESS_SECRET", "JWT_ACCESS_EXP", "JWT_REFRESH_SECRET", "JWT_REFRESH_EXP",
 		"DB_NAME", "DB_USER", "DB_PORT", "DB_HOST", "DB_SSLMODE", "DB_PASSWORD",
-		"MQ_USER", "MQ_PASSWORD", "MQ_PORT", "MQ_VHOST",
+		"MQ_USER", "MQ_PASSWORD", "MQ_PORT", "MQ_VHOST", "MQ_HOST",
 	}
 }
 
@@ -112,7 +112,9 @@ func (e *Env) validate() error {
 		return errors.New("MQ_VHOST is required")
 	} else if e.MQ.Port == 0 {
 		return errors.New("MQ_PORT is required")
-	} else {
-		return nil
+	} else if e.MQ.Host == "" {
+		return errors.New("MQ_HOST is required")
 	}
+
+	return nil
 }

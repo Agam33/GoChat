@@ -28,6 +28,12 @@ func NewAuthHandler(authService auth.AuthService) AuthHandler {
 	}
 }
 
+// @Summary Logout
+// @Security BearerAuth
+// @Tags 	Auth
+// @Success	200 {object} response.BoolResponse
+// @Failure 400 {object} response.AppErr
+// @Router  /auth/logout [post]
 func (h *authHandler) Logout(c *gin.Context) {
 	c.SetCookie(
 		"refreshToken",
@@ -39,12 +45,19 @@ func (h *authHandler) Logout(c *gin.Context) {
 		true,
 	)
 
-	c.JSON(http.StatusOK, response.SuccessReponse[bool]{
+	c.JSON(http.StatusOK, response.SuccessReponse[response.BoolResponse]{
 		Message: constant.StatusSuccess,
-		Data:    true,
+		Data: response.BoolResponse{
+			Data: true,
+		},
 	})
 }
 
+// @Summary Refresh Token
+// @Tags	Auth
+// @Success	200 {object}	response.SignInResponse
+// @Failure 400 {object}	response.AppErr
+// @Router	/auth/refresh-token [get]
 func (h *authHandler) RefreshToken(c *gin.Context) {
 	token := c.GetString(constant.CtxRefreshToken)
 
@@ -62,8 +75,14 @@ func (h *authHandler) RefreshToken(c *gin.Context) {
 	})
 }
 
+// @Summary SignIn
+// @Tags	Auth
+// @Param	request body	request.SignInRequest true	"SignIn Request Payload"
+// @Success	200 {object}	response.SignInResponse
+// @Failure 400 {object}	response.AppErr
+// @Router	/auth/signin	[post]
 func (h *authHandler) SignIn(c *gin.Context) {
-	var req request.SignInRequst
+	var req request.SignInRequest
 	if err := c.ShouldBind(&req); err != nil {
 		c.Error(response.NewBadRequestErr("invalid request signIn", err))
 		return
@@ -83,6 +102,12 @@ func (h *authHandler) SignIn(c *gin.Context) {
 	})
 }
 
+// @Summary SignUp
+// @Tags	Auth
+// @Param	request body	request.SignUpRequest true	"SignUp Request Payload"
+// @Success	200 {object}	response.SignInResponse
+// @Failure 400 {object}	response.AppErr
+// @Router	/auth/signup	[post]
 func (h *authHandler) SignUp(c *gin.Context) {
 	var req request.SignUpRequest
 	if err := c.ShouldBind(&req); err != nil {

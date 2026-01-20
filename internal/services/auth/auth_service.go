@@ -16,7 +16,7 @@ import (
 type AuthService interface {
 	RefreshToken(string) (response.SignInResponse, error)
 	SignUp(context.Context, *request.SignUpRequest) (response.SignInResponse, error)
-	SignIn(context.Context, *request.SignInRequst) (response.SignInResponse, error)
+	SignIn(context.Context, *request.SignInRequest) (response.SignInResponse, error)
 }
 
 type authService struct {
@@ -91,7 +91,7 @@ func (as *authService) SignUp(ctx context.Context, req *request.SignUpRequest) (
 	}, nil
 }
 
-func (as *authService) SignIn(ctx context.Context, req *request.SignInRequst) (response.SignInResponse, error) {
+func (as *authService) SignIn(ctx context.Context, req *request.SignInRequest) (response.SignInResponse, error) {
 	usr, err := as.authRepo.FindByUsername(ctx, req.Username)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
