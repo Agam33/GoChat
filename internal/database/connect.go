@@ -46,7 +46,6 @@ func Connect(dbCfg *DBConfig) (*gorm.DB, error) {
 		&model.Room{},
 		&model.UserRoom{},
 		&model.Message{},
-		&model.ReplyMessage{},
 	); err != nil {
 		return nil, err
 	}

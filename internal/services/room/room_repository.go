@@ -77,7 +77,6 @@ func (r *roomRepository) GetRoomMessages(ctx context.Context, roomId uint64, pag
 		Order("created_at DESC").
 		Limit(pagination.Limit).
 		Offset(utils.PageOffset(pagination.Page, pagination.Limit)).
-		Preload("ReplyMessage").
 		Preload("Sender").Find(&messages).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
