@@ -19,7 +19,7 @@ func ValidateJWT(currToken string, secret string) (jwt.MapClaims, error) {
 	j, err := jwt.Parse(currToken, func(t *jwt.Token) (any, error) {
 		return []byte(secret), nil
 	})
-	if err != nil {
+	if err != nil || !j.Valid {
 		return nil, err
 	}
 

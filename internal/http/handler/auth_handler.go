@@ -1,0 +1,130 @@
+package handler
+
+import (
+	"go-chat/internal/constant"
+	"go-chat/internal/http/request"
+	"go-chat/internal/http/response"
+	"go-chat/internal/services/auth"
+	"go-chat/internal/utils"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+)
+
+type AuthHandler interface {
+	Logout(c *gin.Context)
+	RefreshToken(c *gin.Context)
+	SignUp(c *gin.Context)
+	SignIn(c *gin.Context)
+}
+
+type authHandler struct {
+	authService auth.AuthService
+}
+
+func NewAuthHandler(authService auth.AuthService) AuthHandler {
+	return &authHandler{
+		authService: authService,
+	}
+}
+
+// @Summary Logout
+// @Security BearerAuth
+// @Tags 	Auth
+// @Success	200 {object} response.BoolResponse
+// @Failure 400 {object} response.AppErr
+// @Router  /auth/logout [post]
+func (h *authHandler) Logout(c *gin.Context) {
+	c.SetCookie(
+		"refreshToken",
+		"",
+		-1,
+		"/",
+		"",
+		false,
+		true,
+	)
+
+	c.JSON(http.StatusOK, response.SuccessReponse[response.BoolResponse]{
+		Message: constant.StatusSuccess,
+		Data: response.BoolResponse{
+			Data: true,
+		},
+	})
+}
+
+// @Summary Refresh Token
+// @Tags	Auth
+// @Success	200 {object}	response.SignInResponse
+// @Failure 400 {object}	response.AppErr
+// @Router	/auth/refresh-token [get]
+func (h *authHandler) RefreshToken(c *gin.Context) {
+	token := c.GetString(constant.CtxRefreshToken)
+
+	resp, err := h.authService.RefreshToken(token)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	utils.SetRefreshTokenCookie(c, resp.RefreshToken)
+
+	c.JSON(http.StatusOK, response.SuccessReponse[response.SignInResponse]{
+		Message: constant.StatusSuccess,
+		Data:    resp,
+	})
+}
+
+// @Summary SignIn
+// @Tags	Auth
+// @Param	request body	request.SignInRequest true	"SignIn Request Payload"
+// @Success	200 {object}	response.SignInResponse
+// @Failure 400 {object}	response.AppErr
+// @Router	/auth/signin	[post]
+func (h *authHandler) SignIn(c *gin.Context) {
+	var req request.SignInRequest
+	if err := c.ShouldBind(&req); err != nil {
+		c.Error(response.NewBadRequestErr("invalid request signIn", err))
+		return
+	}
+
+	resp, err := h.authService.SignIn(c.Request.Context(), &req)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	utils.SetRefreshTokenCookie(c, resp.RefreshToken)
+
+	c.JSON(http.StatusOK, response.SuccessReponse[response.SignInResponse]{
+		Message: constant.StatusSuccess,
+		Data:    resp,
+	})
+}
+
+// @Summary SignUp
+// @Tags	Auth
+// @Param	request body	request.SignUpRequest true	"SignUp Request Payload"
+// @Success	200 {object}	response.SignInResponse
+// @Failure 400 {object}	response.AppErr
+// @Router	/auth/signup	[post]
+func (h *authHandler) SignUp(c *gin.Context) {
+	var req request.SignUpRequest
+	if err := c.ShouldBind(&req); err != nil {
+		c.Error(response.NewBadRequestErr("invalid request signUp", err))
+		return
+	}
+
+	resp, err := h.authService.SignUp(c.Request.Context(), &req)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	utils.SetRefreshTokenCookie(c, resp.RefreshToken)
+
+	c.JSON(http.StatusOK, response.SuccessReponse[response.SignInResponse]{
+		Message: constant.StatusSuccess,
+		Data:    resp,
+	})
+}
