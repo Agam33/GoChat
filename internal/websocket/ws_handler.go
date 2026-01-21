@@ -377,7 +377,7 @@ func (h *wsHandler) ServeWS(c *gin.Context) {
 
 	conn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		c.AbortWithError(http.StatusBadRequest, response.NewBadRequestErr("can't serve to websocket", err))
+		c.AbortWithError(http.StatusBadRequest, response.NewBadRequestErr("can't serve websocket", err))
 		return
 	}
 

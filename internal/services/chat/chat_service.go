@@ -9,6 +9,7 @@ import (
 	"go-chat/internal/websocket/event"
 	"time"
 
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -47,17 +48,17 @@ func (c *chatService) GetMessageById(ctx context.Context, msgId uint64) (respons
 
 func (c *chatService) ReplyMessage(ctx context.Context, req *event.SendReplyEvent, contentData event.TextContentData, resMessage response.GetMessageByIdResponse) error {
 	if err := c.chatRepo.WithTransaction(ctx, func(chatRepo ChatRepository) error {
-		replyId, err := chatRepo.SaveReplyMessage(ctx, contentData.ContentType, resMessage.Content)
-		if err != nil {
-			return response.NewInternalServerErr(err.Error(), err)
-		}
-
 		jsonb, _ := json.Marshal(contentData)
+		jsonreply, _ := json.Marshal(resMessage.Content)
+		nullableContent := &jsonreply
 		msgModel := &model.Message{
-			ID:          uint64(time.Now().UnixMilli()),
-			RoomID:      req.RoomId,
-			SenderID:    req.SenderId,
-			ReplyID:     &replyId,
+			ID:       uint64(time.Now().UnixMilli()),
+			RoomID:   req.RoomId,
+			SenderID: req.SenderId,
+
+			ReplyID:      &resMessage.ID,
+			ReplyContent: (*datatypes.JSON)(nullableContent),
+
 			ContentType: contentData.ContentType,
 			Content:     jsonb,
 			CreatedAt:   contentData.CreatedAt,
@@ -97,7 +98,11 @@ func (c *chatService) SaveTextMessage(ctx context.Context, senderId uint64, room
 }
 
 func (c *chatService) DeleteMessage(ctx context.Context, req *event.DeleteMessageEvent) (response.BoolResponse, error) {
-	err := c.chatRepo.DeleteMessage(ctx, req.SenderId, req.MessageId)
+	deletedContent, _ := json.Marshal(map[string]any{
+		"contentType": "text",
+		"text":        "This message was deleted",
+	})
+	err := c.chatRepo.DeleteMessage(ctx, req.SenderId, req.MessageId, deletedContent)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return response.BoolResponse{}, response.NewNotFoundErr("message not found", err)

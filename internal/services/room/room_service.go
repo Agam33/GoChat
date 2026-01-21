@@ -117,10 +117,10 @@ func (r *roomService) GetMessages(ctx context.Context, roomId int64, pagination 
 		}
 
 		var replyMsg *response.GetMessageByIdResponse
-		if message.ReplyID != nil && message.ReplyMessage != nil {
+		if message.ReplyID != nil && message.ReplyContent != nil {
 			replyMsg = &response.GetMessageByIdResponse{
-				ID:      message.ReplyMessage.ID,
-				Content: json.RawMessage(message.ReplyMessage.ReplyContent),
+				ID:      *message.ReplyID,
+				Content: json.RawMessage(*message.ReplyContent),
 			}
 		}
 
