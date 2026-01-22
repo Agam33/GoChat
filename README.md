@@ -4,7 +4,7 @@ The goal of this project is to demonstrate the core concepts of a chat system, w
 
 ### ERD
 
-![img-erd](https://github.com/user-attachments/assets/2c9e9ed6-b84f-4bb0-a612-4b9bde65d3e4)
+![img-erd](docs/images/erd.png)
 
 ---
 
@@ -25,7 +25,7 @@ The goal of this project is to demonstrate the core concepts of a chat system, w
 
 This project used [Swagger](https://github.com/swaggo/swag) for REST api documentation. You can access it at: http://localhost:8000/swagger/index.html#/
 
-![img-swagger](https://github.com/user-attachments/assets/5dfe5fc0-3d62-419e-a2fb-445c4ef9c06d)
+![img-swagger](docs/images/rest_doc.png)
 
 
 #### Websocket
